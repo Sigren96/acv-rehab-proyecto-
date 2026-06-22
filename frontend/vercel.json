@@ -1,11 +1,6 @@
 {
   "version": 2,
   "name": "acv-rehab-frontend",
-  "builds": [
-    { "src": "pages/**/*.html", "use": "@vercel/static" },
-    { "src": "css/**",          "use": "@vercel/static" },
-    { "src": "js/**",           "use": "@vercel/static" }
-  ],
   "routes": [
     { "src": "/",               "dest": "/pages/index.html"    },
     { "src": "/dashboard",      "dest": "/pages/dashboard.html" },
@@ -14,6 +9,6 @@
     { "src": "/js/(.*)",        "dest": "/js/$1"               }
   ],
   "env": {
-    "ENV_API_BASE": "https://TU_BACKEND.railway.app/api/v1"
+    "ENV_API_BASE": "https://acv-rehab-proyecto-production.up.railway.app/api/v1"
   }
 }
