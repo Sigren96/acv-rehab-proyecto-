@@ -152,8 +152,7 @@
 <!-- Scripts -->
 <script src="../js/api.js"></script>
 <script>
-  const { ApiAuth, showToast, openModal, closeModal } = window.ACV;
-
+  
   // Redirigir si ya está autenticado
   if (Auth.estaAutenticado()) {
     window.location.href = Auth.rol === "paciente" ? "/paciente.html" : "/dashboard.html";
