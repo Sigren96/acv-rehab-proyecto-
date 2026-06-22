@@ -1,0 +1,25 @@
+# Entornos virtuales de Python (Evita subir megabytes innecesarios)
+venv/
+.venv/
+env/
+ENV/
+build/
+dist/
+
+# Archivos de configuración y credenciales secretas (¡NUNCA SUBIR A GITHUB!)
+.env
+.env.local
+*.env
+
+# Archivos del sistema operativo y editores
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Caché de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.pytest_cache/

@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ACV-Rehab — Iniciar Sesión</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* ── Estilos exclusivos de esta página ── */
+    .divider {
+      display: flex; align-items: center; gap: 12px;
+      margin: 20px 0; color: var(--gris-texto); font-size: .78rem;
+    }
+    .divider::before, .divider::after {
+      content: ""; flex: 1; height: 1px; background: var(--gris-borde);
+    }
+    .form-section { display: none; }
+    .form-section.activo { display: block; }
+    .pin-hint {
+      text-align: center; font-size: .78rem; color: var(--gris-texto);
+      margin-bottom: 20px;
+    }
+    .registro-link {
+      text-align: center; font-size: .8rem; margin-top: 16px; color: var(--gris-texto);
+    }
+    .logo-pulse {
+      animation: logoPulse 2s ease infinite;
+    }
+    @keyframes logoPulse {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.07); }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ PÁGINA DE LOGIN ══════════════════════════════════════════════════ -->
+<div class="login-page">
+  <div class="login-card">
+
+    <!-- Logo -->
+    <div class="login-logo">
+      <div class="logo-icon logo-pulse">🧠</div>
+      <h1>Sistema de Rehabilitación ACV</h1>
+      <p>Universidad Nacional Federico Villarreal</p>
+    </div>
+
+    <!-- Selector de rol -->
+    <p style="text-align:center;font-size:.8rem;color:var(--gris-texto);margin-bottom:12px;">
+      ¿Cómo deseas ingresar?
+    </p>
+    <div class="role-selector">
+      <button class="role-btn" id="btn-rol-terapeuta" onclick="seleccionarRol('terapeuta')">
+        <span class="role-icon">👨‍⚕️</span>
+        <span class="role-label">Terapeuta</span>
+      </button>
+      <button class="role-btn" id="btn-rol-paciente" onclick="seleccionarRol('paciente')">
+        <span class="role-icon">🙋</span>
+        <span class="role-label">Paciente</span>
+      </button>
+    </div>
+
+    <!-- ── FORMULARIO TERAPEUTA ── -->
+    <div id="form-section-terapeuta" class="form-section">
+      <form id="form-login-terapeuta" novalidate>
+        <div class="form-group">
+          <label class="form-label" for="email">Correo electrónico</label>
+          <input class="form-control" id="email" type="email" placeholder="correo@hospital.com" required autocomplete="email" />
+        </div>
+        <div class="form-group">
+          <label class="form-label" for="password">Contraseña</label>
+          <input class="form-control" id="password" type="password" placeholder="••••••••" required autocomplete="current-password" />
+        </div>
+        <div id="error-login" class="form-error hidden"></div>
+        <button type="submit" class="btn btn-primary btn-lg w-full" id="btn-login">
+          Ingresar como Terapeuta
+        </button>
+      </form>
+
+      <div class="divider">o</div>
+
+      <button class="btn btn-outline w-full" onclick="mostrarRegistro()">
+        Registrarse como terapeuta
+      </button>
+    </div>
+
+    <!-- ── FORMULARIO PACIENTE (PIN) ── -->
+    <div id="form-section-paciente" class="form-section">
+      <p class="pin-hint">Ingresa el PIN de 6 dígitos que te proporcionó tu terapeuta</p>
+      <div class="pin-input-wrapper" id="pin-wrapper">
+        <input class="pin-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" />
+        <input class="pin-digit" maxlength="1" type="text" inputmode="numeric" pattern="[0-9]" />
+      </div>
+      <div id="error-pin" class="form-error hidden text-center"></div>
+      <button class="btn btn-primary btn-lg w-full" id="btn-login-pin" onclick="loginPaciente()">
+        Entrar con PIN
+      </button>
+    </div>
+
+    <!-- Indicador de carga -->
+    <div id="loading" class="text-center mt-4 hidden">
+      <span class="spinner"></span>
+    </div>
+
+    <div class="registro-link" id="link-registro" style="display:none;">
+      <a href="#" onclick="ocultarRegistro(); return false;">← Volver al login</a>
+    </div>
+  </div>
+</div>
+
+<!-- ══ MODAL: REGISTRO TERAPEUTA ════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-registro">
+  <div class="modal">
+    <h2 class="modal-title">Registro de Terapeuta</h2>
+    <p class="modal-subtitle">Crea tu cuenta como especialista en rehabilitación.</p>
+    <form id="form-registro" novalidate>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Nombres</label>
+          <input class="form-control" id="reg-nombres" type="text" placeholder="Juan" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Apellidos</label>
+          <input class="form-control" id="reg-apellidos" type="text" placeholder="Pérez" required />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Especialidad</label>
+        <input class="form-control" id="reg-especialidad" type="text" placeholder="Neurorrehabilitación" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Correo electrónico</label>
+        <input class="form-control" id="reg-email" type="email" placeholder="correo@hospital.com" required />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <input class="form-control" id="reg-password" type="password" placeholder="Mínimo 6 caracteres" required />
+      </div>
+      <div id="error-registro" class="form-error hidden"></div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost" onclick="window.ACV.closeModal('modal-registro')">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Crear cuenta</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/api.js"></script>
+<script>
+  const { Auth, ApiAuth, showToast, openModal, closeModal } = window.ACV;
+
+  // Redirigir si ya está autenticado
+  if (Auth.estaAutenticado()) {
+    window.location.href = Auth.rol === "paciente" ? "/paciente.html" : "/dashboard.html";
+  }
+
+  let rolSeleccionado = null;
+
+  function seleccionarRol(rol) {
+    rolSeleccionado = rol;
+    document.getElementById("btn-rol-terapeuta").classList.toggle("selected", rol === "terapeuta");
+    document.getElementById("btn-rol-paciente").classList.toggle("selected", rol === "paciente");
+    document.querySelectorAll(".form-section").forEach(f => f.classList.remove("activo"));
+    document.getElementById(`form-section-${rol}`).classList.add("activo");
+    if (rol === "paciente") inicializarPinInput();
+  }
+
+  // ── Login terapeuta ──────────────────────────────────────────────────
+  document.getElementById("form-login-terapeuta")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById("btn-login");
+    const errEl = document.getElementById("error-login");
+    errEl.classList.add("hidden");
+    btn.disabled = true;
+    btn.textContent = "Ingresando...";
+
+    try {
+      const data = await ApiAuth.loginTerapeuta(
+        document.getElementById("email").value.trim(),
+        document.getElementById("password").value,
+      );
+      Auth.guardar(data.access_token, data.rol || "terapeuta", data.nombres);
+      window.location.href = "/dashboard.html";
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove("hidden");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Ingresar como Terapeuta";
+    }
+  });
+
+  // ── Login paciente por PIN ───────────────────────────────────────────
+  async function loginPaciente() {
+    const digits = [...document.querySelectorAll(".pin-digit")].map(i => i.value.trim());
+    const pin    = digits.join("");
+    const errEl  = document.getElementById("error-pin");
+    errEl.classList.add("hidden");
+
+    if (pin.length !== 6 || !/^\d{6}$/.test(pin)) {
+      errEl.textContent = "Ingresa los 6 dígitos completos.";
+      errEl.classList.remove("hidden");
+      return;
+    }
+
+    const btn = document.getElementById("btn-login-pin");
+    btn.disabled = true;
+    btn.textContent = "Verificando...";
+
+    try {
+      const data = await ApiAuth.loginPaciente(pin);
+      Auth.guardar("pin_" + pin, "paciente", data.nombres, data.paciente_id);
+      window.location.href = "/paciente.html";
+    } catch (err) {
+      errEl.textContent = "PIN incorrecto. Verifica con tu terapeuta.";
+      errEl.classList.remove("hidden");
+    } finally {
+      btn.disabled = false;
+      btn.textContent = "Entrar con PIN";
+    }
+  }
+
+  // ── Navegación PIN: auto-avance y backspace ──────────────────────────
+  function inicializarPinInput() {
+    const inputs = document.querySelectorAll(".pin-digit");
+    inputs.forEach((input, i) => {
+      input.addEventListener("input", (e) => {
+        const val = e.target.value.replace(/\D/g, "");
+        e.target.value = val.slice(-1);
+        if (val && i < inputs.length - 1) inputs[i + 1].focus();
+        if (i === inputs.length - 1 && val) loginPaciente();
+      });
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Backspace" && !input.value && i > 0) {
+          inputs[i - 1].value = "";
+          inputs[i - 1].focus();
+        }
+      });
+      input.addEventListener("paste", (e) => {
+        e.preventDefault();
+        const pasted = (e.clipboardData || window.clipboardData).getData("text").replace(/\D/g, "").slice(0, 6);
+        inputs.forEach((inp, idx) => { inp.value = pasted[idx] || ""; });
+        if (pasted.length === 6) loginPaciente();
+      });
+    });
+    inputs[0].focus();
+  }
+
+  // ── Registro terapeuta ───────────────────────────────────────────────
+  function mostrarRegistro() { openModal("modal-registro"); }
+  function ocultarRegistro() { closeModal("modal-registro"); }
+
+  document.getElementById("form-registro")?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const errEl = document.getElementById("error-registro");
+    errEl.classList.add("hidden");
+    const btn = e.target.querySelector('button[type="submit"]');
+    btn.disabled = true;
+    try {
+      await ApiAuth.registroTerapeuta({
+        nombres:      document.getElementById("reg-nombres").value.trim(),
+        apellidos:    document.getElementById("reg-apellidos").value.trim(),
+        especialidad: document.getElementById("reg-especialidad").value.trim(),
+        email:        document.getElementById("reg-email").value.trim(),
+        password:     document.getElementById("reg-password").value,
+      });
+      closeModal("modal-registro");
+      showToast("Cuenta creada. Ahora puedes iniciar sesión.", "success");
+      seleccionarRol("terapeuta");
+    } catch (err) {
+      errEl.textContent = err.message;
+      errEl.classList.remove("hidden");
+    } finally {
+      btn.disabled = false;
+    }
+  });
+</script>
+</body>
+</html>

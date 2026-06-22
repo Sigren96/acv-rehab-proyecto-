@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>ACV-Rehab — Vista Paciente</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <style>
+    /* ── Estilos exclusivos de la vista del paciente ── */
+    body {
+      overflow: hidden;
+      background: var(--azul-oscuro);
+      touch-action: manipulation;
+    }
+
+    /* Pantallas de pantalla completa */
+    .pantalla {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      transition: background var(--trans-med);
+      -webkit-user-select: none;
+      user-select: none;
+    }
+
+    /* ── Pantalla de espera ── */
+    #pantalla-espera {
+      background: var(--azul-oscuro);
+    }
+
+    .espera-contenido {
+      text-align: center;
+      padding: 32px 24px;
+      max-width: 360px;
+    }
+
+    .espera-icono {
+      font-size: 4rem;
+      margin-bottom: 16px;
+      animation: flotar 3s ease-in-out infinite;
+    }
+
+    @keyframes flotar {
+      0%,100% { transform: translateY(0);    }
+      50%      { transform: translateY(-10px); }
+    }
+
+    .bienvenida-txt {
+      font-size: clamp(1rem, 5vw, 1.4rem);
+      font-weight: 800;
+      color: var(--blanco);
+      margin-bottom: 8px;
+    }
+
+    .espera-sub {
+      font-size: clamp(.78rem, 3vw, .95rem);
+      color: rgba(255,255,255,.65);
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    .conexion-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 99px;
+      padding: 8px 16px;
+      font-size: .75rem;
+      color: rgba(255,255,255,.8);
+      font-weight: 600;
+    }
+
+    /* ── Pantalla de estímulo ── */
+    #pantalla-estimulo {
+      background: var(--gris-fondo);
+    }
+
+    #pantalla-estimulo.go-screen   { background: #F0FDF4; }
+    #pantalla-estimulo.nogo-screen { background: #FEF2F2; }
+    #pantalla-estimulo.descanso-screen { background: #F8FAFC; }
+
+    .estimulo-centro {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      padding: 24px;
+      text-align: center;
+    }
+
+    /* Flecha GO */
+    .flecha-go {
+      font-size: clamp(80px, 35vw, 220px);
+      line-height: 1;
+      color: var(--go-color);
+      animation: latido .9s ease-in-out infinite;
+      filter: drop-shadow(0 4px 20px rgba(22,163,74,.3));
+      transition: opacity .1s;
+    }
+
+    @keyframes latido {
+      0%,100% { transform: scale(1); }
+      50%      { transform: scale(1.06); }
+    }
+
+    /* Cruz NO-GO */
+    .cruz-nogo {
+      font-size: clamp(80px, 38vw, 240px);
+      line-height: 1;
+      color: var(--nogo-color);
+      animation: vibrar .5s ease infinite alternate;
+      filter: drop-shadow(0 4px 20px rgba(220,38,38,.3));
+    }
+
+    @keyframes vibrar {
+      from { transform: scale(1);    }
+      to   { transform: scale(1.05); }
+    }
+
+    /* Etiqueta de instrucción */
+    .instruccion-label {
+      font-size: clamp(.9rem, 4.5vw, 1.6rem);
+      font-weight: 800;
+      letter-spacing: .04em;
+      text-transform: uppercase;
+    }
+
+    .instruccion-label.go-color   { color: var(--go-color); }
+    .instruccion-label.nogo-color { color: var(--nogo-color); }
+
+    .dir-label {
+      font-size: clamp(.75rem, 3.5vw, 1.1rem);
+      font-weight: 600;
+      color: var(--gris-oscuro);
+      opacity: .7;
+    }
+
+    /* Barra de tiempo */
+    .timer-wrap {
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 6px;
+      background: rgba(0,0,0,.08);
+    }
+
+    #timer-barra {
+      height: 100%;
+      background: var(--azul-primario);
+      width: 100%;
+      transform-origin: left;
+    }
+
+    /* Contador de ronda */
+    #contador-ronda {
+      position: fixed;
+      top: 16px; left: 50%;
+      transform: translateX(-50%);
+      font-size: .75rem;
+      font-weight: 700;
+      color: var(--gris-texto);
+      background: var(--blanco);
+      padding: 4px 14px;
+      border-radius: 99px;
+      box-shadow: var(--shadow-sm);
+      white-space: nowrap;
+    }
+
+    /* Overlay de resultado ronda */
+    #resultado-overlay {
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .res-icono { font-size: clamp(3rem, 15vw, 6rem); }
+    .res-texto { font-size: clamp(.9rem, 4vw, 1.3rem); font-weight: 800; }
+    .res-acierto { color: var(--go-color); }
+    .res-error   { color: var(--nogo-color); }
+    .res-timeout { color: var(--gris-oscuro); }
+
+    /* ── Pantalla de fin de sesión ── */
+    #pantalla-fin {
+      background: linear-gradient(135deg, var(--azul-oscuro) 0%, var(--azul-primario) 100%);
+      padding: 32px 24px;
+    }
+
+    .fin-contenido {
+      text-align: center;
+      max-width: 360px;
+    }
+
+    .fin-titulo {
+      font-size: clamp(1.3rem, 6vw, 2rem);
+      font-weight: 800;
+      color: var(--blanco);
+      margin-bottom: 8px;
+    }
+
+    .fin-sub {
+      font-size: .875rem;
+      color: rgba(255,255,255,.7);
+      margin-bottom: 28px;
+    }
+
+    .fin-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+
+    .fin-stat {
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: var(--radius-md);
+      padding: 16px;
+      text-align: center;
+    }
+
+    .fin-stat-label {
+      font-size: .7rem;
+      font-weight: 700;
+      color: rgba(255,255,255,.65);
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      margin-bottom: 4px;
+    }
+
+    .fin-stat-valor {
+      font-size: 1.8rem;
+      font-weight: 800;
+      color: var(--blanco);
+      line-height: 1;
+    }
+
+    .pct-grande {
+      grid-column: 1 / -1;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ══ PANTALLA 1: SALA DE ESPERA ════════════════════════════════════════ -->
+<div class="pantalla" id="pantalla-espera">
+  <div class="espera-contenido">
+    <div class="espera-icono">🧠</div>
+    <div class="bienvenida-txt" id="bienvenida-nombre">Hola, Paciente</div>
+    <p class="espera-sub" id="espera-msg-secundario">
+      Conectado al sistema. Esperando que tu terapeuta inicie la sesión...
+    </p>
+    <div class="conexion-pill">
+      <div class="dot verde"></div>
+      <span id="conexion-status">Conectado</span>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PANTALLA 2: ESTÍMULO GO / NO-GO ══════════════════════════════════ -->
+<div class="pantalla hidden" id="pantalla-estimulo">
+
+  <!-- Contador de ronda (arriba centrado) -->
+  <div id="contador-ronda">Ronda 1 de 10</div>
+
+  <!-- Contenido del estímulo (flecha o cruz) -->
+  <div class="estimulo-centro" id="estimulo-content">
+    <!-- Renderizado por paciente.js -->
+  </div>
+
+  <!-- Barra de tiempo restante -->
+  <div class="timer-wrap">
+    <div id="timer-barra"></div>
+  </div>
+
+  <!-- Overlay de feedback de resultado -->
+  <div id="resultado-overlay"></div>
+</div>
+
+<!-- ══ PANTALLA 3: FIN DE SESIÓN ═════════════════════════════════════════ -->
+<div class="pantalla hidden" id="pantalla-fin">
+  <div class="fin-contenido">
+    <div style="font-size:3rem;margin-bottom:12px;">🏆</div>
+    <div class="fin-titulo">¡Sesión completada!</div>
+    <p class="fin-sub">Excelente trabajo. Estos son tus resultados:</p>
+
+    <div class="fin-stats">
+      <div class="fin-stat pct-grande">
+        <div class="fin-stat-label">Desempeño general</div>
+        <div class="fin-stat-valor" id="fin-pct">—</div>
+      </div>
+      <div class="fin-stat">
+        <div class="fin-stat-label">Aciertos</div>
+        <div class="fin-stat-valor" style="color:#6EE7B7;" id="fin-aciertos">0</div>
+      </div>
+      <div class="fin-stat">
+        <div class="fin-stat-label">Errores</div>
+        <div class="fin-stat-valor" style="color:#FCA5A5;" id="fin-errores">0</div>
+      </div>
+      <div class="fin-stat pct-grande">
+        <div class="fin-stat-label">Latencia promedio</div>
+        <div class="fin-stat-valor" id="fin-latencia">—</div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary btn-lg w-full" id="btn-volver-inicio">
+      Salir
+    </button>
+  </div>
+</div>
+
+<!-- Scripts -->
+<script src="js/api.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/paciente.js"></script>
+</body>
+</html>

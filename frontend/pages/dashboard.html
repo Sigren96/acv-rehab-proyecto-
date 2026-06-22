@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>ACV-Rehab — Dashboard Terapeuta</title>
+  <link rel="stylesheet" href="css/styles.css" />
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+  <!-- jsPDF + AutoTable CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+<div class="app-shell">
+
+  <!-- ══ SIDEBAR ══════════════════════════════════════════════════════════ -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <h1>🧠 ACV-Rehab</h1>
+      <span>Panel del Terapeuta</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <div class="nav-section-label">Principal</div>
+
+      <button class="nav-item active" data-view="pacientes">
+        <span class="nav-icon">👥</span> Pacientes
+      </button>
+      <button class="nav-item" data-view="sesiones">
+        <span class="nav-icon">▶</span> Nueva Sesión
+      </button>
+      <button class="nav-item" data-view="monitoreo">
+        <span class="nav-icon">📡</span> Monitoreo
+      </button>
+
+      <div class="nav-section-label">Análisis</div>
+
+      <button class="nav-item" data-view="historial">
+        <span class="nav-icon">📊</span> Historial
+      </button>
+
+      <div class="nav-section-label">Sistema</div>
+
+      <button class="nav-item" data-view="configuraciones">
+        <span class="nav-icon">⚙</span> Configuraciones
+      </button>
+      <button class="nav-item" data-view="perfil">
+        <span class="nav-icon">👤</span> Perfil
+      </button>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="sidebar-user">
+        <div class="user-avatar" id="user-initial">T</div>
+        <div class="user-info">
+          <div class="user-name" id="user-name">Terapeuta</div>
+          <div class="user-role">Especialista</div>
+        </div>
+      </div>
+      <button class="btn btn-ghost w-full mt-2" id="btn-logout" style="font-size:.78rem;">
+        Cerrar sesión
+      </button>
+    </div>
+  </aside>
+
+  <!-- Overlay móvil -->
+  <div class="sidebar-overlay" id="sidebar-overlay"></div>
+
+  <!-- ══ CONTENIDO PRINCIPAL ═══════════════════════════════════════════════ -->
+  <main class="main-content">
+
+    <!-- Topbar -->
+    <header class="topbar">
+      <div class="flex items-center gap-3">
+        <button class="hamburger" id="hamburger" aria-label="Menú">
+          <span></span><span></span><span></span>
+        </button>
+        <span class="topbar-title" id="topbar-title">Pacientes</span>
+      </div>
+      <div class="topbar-actions">
+        <div class="device-status" id="device-status" title="Estado de la Pico">
+          <div class="dot amarillo" id="device-dot"></div>
+          <span class="device-text">Sin sesión activa</span>
+        </div>
+      </div>
+    </header>
+
+    <div class="page-body">
+
+      <!-- ── VISTA: PACIENTES ─────────────────────────────────────────── -->
+      <section id="view-pacientes" class="view">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 style="font-size:1.1rem;font-weight:700;">Mis Pacientes</h2>
+            <p class="muted">Gestiona el registro clínico de tus pacientes.</p>
+          </div>
+          <button class="btn btn-primary" id="btn-nuevo-paciente">+ Nuevo paciente</button>
+        </div>
+
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Paciente</th>
+                <th>Diagnóstico</th>
+                <th>Movilidad</th>
+                <th>PIN</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-pacientes">
+              <tr><td colspan="6" class="text-center muted">Cargando...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── VISTA: NUEVA SESIÓN ──────────────────────────────────────── -->
+      <section id="view-sesiones" class="view hidden">
+        <div class="mb-4">
+          <h2 style="font-size:1.1rem;font-weight:700;">Configurar Nueva Sesión</h2>
+          <p class="muted">Define los parámetros terapéuticos antes de iniciar.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <!-- Formulario sesión -->
+          <div class="card">
+            <div class="card-header"><span class="card-title">Parámetros de Sesión</span></div>
+            <form id="form-sesion" novalidate>
+              <div class="form-group">
+                <label class="form-label">Paciente *</label>
+                <select class="form-control" id="sesion-paciente-id" required>
+                  <option value="">— Selecciona —</option>
+                </select>
+              </div>
+
+              <div class="form-group">
+                <label class="form-label">Actividad</label>
+                <select class="form-control" id="sesion-actividad">
+                  <option value="">— Sin actividad específica —</option>
+                </select>
+                <span class="form-hint">
+                  <a href="#" onclick="window.ACV.openModal('modal-actividad');return false;">+ Crear actividad personalizada</a>
+                </span>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Nivel de dificultad</label>
+                  <select class="form-control" id="sesion-dificultad">
+                    <option value="facil">Fácil — 3.5 s</option>
+                    <option value="medio">Medio — 1.8 s</option>
+                    <option value="dificil">Difícil — 0.8 s</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Número de rondas</label>
+                  <input class="form-control" id="sesion-rondas" type="number" min="1" max="50" value="10" />
+                </div>
+              </div>
+
+              <div class="form-grid">
+                <div class="form-group">
+                  <label class="form-label">Descanso entre rondas (seg)</label>
+                  <input class="form-control" id="sesion-descanso" type="number" min="1" max="30" value="3" />
+                </div>
+                <div class="form-group">
+                  <label class="form-label">% estímulos GO</label>
+                  <input class="form-control" id="sesion-go-pct" type="number" min="10" max="90" value="70" />
+                  <span class="form-hint">El resto serán NO-GO</span>
+                </div>
+              </div>
+
+              <div class="form-group" style="display:none;">
+                <input type="hidden" id="sesion-id-pico" />
+              </div>
+
+              <button type="submit" class="btn btn-success btn-lg w-full">
+                ▶ Crear y pasar a monitoreo
+              </button>
+            </form>
+          </div>
+
+          <!-- Info de referencia -->
+          <div>
+            <div class="card mb-4">
+              <div class="card-header"><span class="card-title">Referencia de Tiempos</span></div>
+              <table>
+                <thead><tr><th>Nivel</th><th>tmax</th><th>Interpretación clínica</th></tr></thead>
+                <tbody>
+                  <tr><td>Fácil</td><td class="mono">3.5 s</td><td>Paciente crítico / bajo reflejo</td></tr>
+                  <tr><td>Medio</td><td class="mono">1.8 s</td><td>Etapa intermedia de recuperación</td></tr>
+                  <tr><td>Difícil</td><td class="mono">0.8 s</td><td>Cerca de valores de adulto sano</td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div class="card">
+              <div class="card-header"><span class="card-title">ID para la Pico</span></div>
+              <p class="muted" style="font-size:.8rem;margin-bottom:8px;">
+                Después de crear la sesión, usa este ID en el firmware de la Pico:
+              </p>
+              <code class="mono bold" id="sesion-id-display" style="font-size:.9rem;word-break:break-all;">—</code>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ── VISTA: MONITOREO ─────────────────────────────────────────── -->
+      <section id="view-monitoreo" class="view hidden">
+        <div class="flex justify-between items-center mb-4">
+          <div>
+            <h2 style="font-size:1.1rem;font-weight:700;">Monitoreo en Tiempo Real</h2>
+            <p class="muted">Datos del MPU6050 en vivo y métricas por ronda.</p>
+          </div>
+          <div class="flex gap-2">
+            <button class="btn btn-danger" id="btn-abortar">⏹ Abortar sesión</button>
+          </div>
+        </div>
+
+        <!-- Stats rápidas -->
+        <div class="stats-grid mb-4">
+          <div class="stat-card azul">
+            <div class="stat-label">Ronda actual</div>
+            <div class="stat-value"><span id="monitor-ronda-actual">0</span><span class="stat-unit"> / </span><span id="monitor-rondas-total">—</span></div>
+          </div>
+          <div class="stat-card verde">
+            <div class="stat-label">Aciertos</div>
+            <div class="stat-value" id="monitor-aciertos">0</div>
+          </div>
+          <div class="stat-card rojo">
+            <div class="stat-label">Errores</div>
+            <div class="stat-value" id="monitor-errores">0</div>
+          </div>
+          <div class="stat-card amarillo">
+            <div class="stat-label">Última latencia</div>
+            <div class="stat-value" id="monitor-latencia">—</div>
+          </div>
+        </div>
+
+        <!-- Estímulo actual -->
+        <div class="card mb-4 flex items-center gap-3">
+          <span style="font-size:.82rem;font-weight:600;color:var(--gris-texto);">Estímulo activo:</span>
+          <span id="monitor-estimulo-actual"><span class="badge badge-pending">Esperando inicio...</span></span>
+          <span style="margin-left:auto;font-size:.78rem;color:var(--gris-texto);">Dificultad: <strong id="monitor-dificultad">—</strong></span>
+        </div>
+
+        <div class="monitor-grid">
+          <!-- Gráfico XYZ vivo -->
+          <div>
+            <div class="chart-container">
+              <div class="chart-label">Aceleración XYZ en vivo (G)</div>
+              <canvas id="chart-xyz"></canvas>
+            </div>
+          </div>
+
+          <!-- Panel de rondas -->
+          <div class="card" style="padding:0;overflow:hidden;">
+            <div style="padding:16px;border-bottom:1px solid var(--gris-borde);">
+              <span class="card-title">Historial de Rondas</span>
+            </div>
+            <div style="max-height:280px;overflow-y:auto;">
+              <table>
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Tipo</th>
+                    <th>Dir.</th>
+                    <th>Resultado</th>
+                    <th>Latencia</th>
+                    <th>Ángulo</th>
+                    <th>Temblor</th>
+                  </tr>
+                </thead>
+                <tbody id="tabla-rondas"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resumen final (se muestra al terminar) -->
+        <div id="resumen-final" class="hidden"></div>
+      </section>
+
+      <!-- ── VISTA: HISTORIAL ─────────────────────────────────────────── -->
+      <section id="view-historial" class="view hidden">
+        <div class="mb-4 flex justify-between items-center">
+          <div>
+            <h2 style="font-size:1.1rem;font-weight:700;">
+              Historial — <span id="historial-nombre">Paciente</span>
+            </h2>
+            <p class="muted">Evolución terapéutica a lo largo del tiempo.</p>
+          </div>
+          <select class="form-control" id="historial-paciente-sel" style="width:220px;">
+            <option value="">— Selecciona paciente —</option>
+          </select>
+        </div>
+
+        <!-- Gráfico histórico -->
+        <div class="hist-chart-wrapper mb-4" style="height:250px;">
+          <div class="chart-label">Evolución: Latencia promedio y Aciertos por sesión</div>
+          <canvas id="chart-historial" style="height:200px;"></canvas>
+        </div>
+
+        <!-- Tabla de sesiones -->
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Dificultad</th>
+                <th>Rondas</th>
+                <th>Aciertos</th>
+                <th>Errores</th>
+                <th>Latencia prom.</th>
+                <th>Ángulo prom.</th>
+              </tr>
+            </thead>
+            <tbody id="tabla-historial">
+              <tr><td colspan="7" class="text-center muted">Selecciona un paciente para ver su historial.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── VISTA: CONFIGURACIONES ───────────────────────────────────── -->
+      <section id="view-configuraciones" class="view hidden">
+        <div class="mb-4">
+          <h2 style="font-size:1.1rem;font-weight:700;">Configuraciones</h2>
+          <p class="muted">Ajusta la conexión y los rangos del sistema.</p>
+        </div>
+
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+          <div class="card">
+            <div class="card-header"><span class="card-title">Conexión al Backend</span></div>
+            <form id="form-config">
+              <div class="form-group">
+                <label class="form-label">URL del Backend (Railway / Fly.io)</label>
+                <input class="form-control mono" id="cfg-api-url" type="url"
+                       placeholder="https://tu-app.railway.app/api/v1" />
+                <span class="form-hint">Cambia esto si tu backend está desplegado en la nube.</span>
+              </div>
+              <button type="submit" class="btn btn-primary">Guardar URL</button>
+            </form>
+          </div>
+
+          <div class="card">
+            <div class="card-header"><span class="card-title">Estado del Sistema Embebido</span></div>
+            <p class="muted" style="font-size:.82rem;margin-bottom:12px;">
+              La Raspberry Pi Pico debe tener configurado el ID de sesión activa en su firmware
+              antes de comenzar a enviar telemetría.
+            </p>
+            <div class="device-status">
+              <div class="dot amarillo"></div>
+              <span>Esperando sesión activa</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rangos de movilidad -->
+        <div class="card mt-4">
+          <div class="card-header"><span class="card-title">Umbrales de Fuerza G por Nivel de Movilidad</span></div>
+          <table>
+            <thead><tr><th>Nivel</th><th>Umbral G</th><th>Descripción clínica</th></tr></thead>
+            <tbody>
+              <tr><td>Crítico</td><td class="mono">±0.30 G</td><td>Muy baja movilidad, procesamiento motor lento</td></tr>
+              <tr><td>Intermedio</td><td class="mono">±0.55 G</td><td>Recuperación parcial</td></tr>
+              <tr><td>Recuperado</td><td class="mono">±0.73 G</td><td>Cercano a valores de adulto sano</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ── VISTA: PERFIL ────────────────────────────────────────────── -->
+      <section id="view-perfil" class="view hidden">
+        <div class="mb-4">
+          <h2 style="font-size:1.1rem;font-weight:700;">Mi Perfil</h2>
+        </div>
+        <div class="card" style="max-width:480px;">
+          <div class="flex items-center gap-3 mb-4">
+            <div class="user-avatar" style="width:56px;height:56px;font-size:1.4rem;" id="perfil-avatar">T</div>
+            <div>
+              <div class="bold" id="perfil-nombre">Terapeuta</div>
+              <div class="muted">Especialista en Rehabilitación</div>
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Nombre completo</label>
+            <input class="form-control" id="perfil-nombre-input" type="text" placeholder="Cargando..." readonly />
+          </div>
+          <p class="muted" style="font-size:.78rem;margin-top:8px;">
+            Para cambiar tu contraseña o email, hazlo directamente desde el panel de Supabase.
+          </p>
+        </div>
+      </section>
+
+    </div><!-- /page-body -->
+  </main>
+</div><!-- /app-shell -->
+
+<!-- ══ MODAL: NUEVO PACIENTE ════════════════════════════════════════════ -->
+<div class="modal-overlay" id="modal-paciente">
+  <div class="modal">
+    <h2 class="modal-title">Registrar Paciente</h2>
+    <p class="modal-subtitle">Se generará un PIN automático de acceso de 6 dígitos.</p>
+    <form id="form-paciente" novalidate>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Nombres *</label>
+          <input class="form-control" id="pac-nombres" type="text" required placeholder="María" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Apellidos *</label>
+          <input class="form-control" id="pac-apellidos" type="text" required placeholder="García" />
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Diagnóstico</label>
+        <input class="form-control" id="pac-diagnostico" type="text" placeholder="ACV isquémico - hemiparesia derecha" />
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Fecha de nacimiento</label>
+          <input class="form-control" id="pac-fecha" type="date" />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nivel de movilidad *</label>
+          <select class="form-control" id="pac-nivel">
+            <option value="critico">Crítico — baja movilidad</option>
+            <option value="intermedio">Intermedio</option>
+            <option value="recuperado">Recuperado</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost modal-close">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Registrar paciente</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ══ MODAL: ACTIVIDAD PERSONALIZADA ═══════════════════════════════════ -->
+<div class="modal-overlay" id="modal-actividad">
+  <div class="modal">
+    <h2 class="modal-title">Nueva Actividad</h2>
+    <p class="modal-subtitle">Define el ejercicio y sus parámetros de validación.</p>
+    <form id="form-actividad" novalidate>
+      <div class="form-group">
+        <label class="form-label">Nombre de la actividad *</label>
+        <input class="form-control" id="act-nombre" type="text" required placeholder="Mover mano hacia la izquierda" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción clínica</label>
+        <textarea class="form-control" id="act-descripcion" rows="2" placeholder="El paciente debe inclinar la muñeca hacia la izquierda..."></textarea>
+      </div>
+      <div class="form-grid">
+        <div class="form-group">
+          <label class="form-label">Eje de movimiento *</label>
+          <select class="form-control" id="act-eje">
+            <option value="X">Eje X — Izquierda / Derecha</option>
+            <option value="Y">Eje Y — Arriba / Abajo</option>
+            <option value="Z">Eje Z — Rotación</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Patrón de validación *</label>
+          <select class="form-control" id="act-patron">
+            <option value="lineal">Lineal (umbral G)</option>
+            <option value="rotacion">Rotación / Círculos (giroscopio)</option>
+          </select>
+        </div>
+      </div>
+      <div class="modal-actions">
+        <button type="button" class="btn btn-ghost modal-close">Cancelar</button>
+        <button type="submit" class="btn btn-primary">Guardar actividad</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Toast container -->
+<div id="toast-container" class="toast-container"></div>
+
+<!-- Scripts -->
+<script src="js/api.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/app.js"></script>
+<script>
+  // Cargar nombre en perfil
+  window.addEventListener("load", () => {
+    const nombres = window.ACV.Auth.nombres || "Terapeuta";
+    const el = document.getElementById("perfil-nombre");
+    const inp = document.getElementById("perfil-nombre-input");
+    const av  = document.getElementById("perfil-avatar");
+    if (el)  el.textContent  = nombres;
+    if (inp) inp.value       = nombres;
+    if (av)  av.textContent  = nombres[0]?.toUpperCase() || "T";
+  });
+</script>
+</body>
+</html>
