@@ -155,7 +155,7 @@
   
   // Redirigir si ya está autenticado
   if (Auth.estaAutenticado()) {
-    window.location.href = Auth.rol === "paciente" ? "/paciente.html" : "/dashboard.html";
+    window.location.href = Auth.rol === "paciente" ? "/paciente" : "/dashboard";
   }
 
   let rolSeleccionado = null;
