@@ -6,7 +6,7 @@
 
 // ── Configuración ─────────────────────────────────────────────────────────────
 // En producción, cambia por tu URL de Railway/Fly.io
-const API_BASE = window.ENV_API_BASE || "http://localhost:8000/api/v1";
+const API_BASE = window.ENV_API_BASE || "https://acv-rehab-proyecto-production.up.railway.app";
 const WS_BASE  = API_BASE.replace(/^http/, "ws").replace("/api/v1", "");
 
 // ── Estado global de sesión ───────────────────────────────────────────────────
