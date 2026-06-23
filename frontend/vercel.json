@@ -1,10 +1,12 @@
 {
   "version": 2,
   "name": "acv-rehab-frontend",
-  "rewrites": [
-    { "source": "/", "destination": "/pages/index.html" },
-    { "source": "/dashboard", "destination": "/pages/dashboard.html" },
-    { "source": "/paciente", "destination": "/pages/paciente.html" }
+  "routes": [
+    { "src": "/", "dest": "/index.html" },
+    { "src": "/dashboard", "dest": "/dashboard.html" },
+    { "src": "/paciente", "dest": "/paciente.html" },
+    { "src": "/css/(.*)", "dest": "/css/$1" },
+    { "src": "/js/(.*)", "dest": "/js/$1" }
   ],
   "env": {
     "ENV_API_BASE": "https://acv-rehab-proyecto-production.up.railway.app/api/v1"
