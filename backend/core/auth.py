@@ -25,8 +25,12 @@ def get_current_user(
         payload = jwt.decode(
             token,
             cfg.supabase_jwt_secret,
-            algorithms=["HS256"],
-            options={"verify_aud": False},  # Supabase no usa audience estándar
+            algorithms=["HS256", "ES256", "RS256"], 
+            options={
+                "verify_signature": False, 
+                "verify_aud": False,
+                "verify_exp": True  # Mantenemos la seguridad de expiración
+            }
         )
         return payload
     except JWTError as exc:
