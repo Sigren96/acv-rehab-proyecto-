@@ -38,7 +38,9 @@ const Auth = {
 // ── Fetch helper ─────────────────────────────────────────────────────────────
 async function apiFetch(path, { method = "GET", body, auth = true } = {}) {
   const headers = { "Content-Type": "application/json" };
-  if (auth && Auth.token) headers["Authorization"] = `Bearer ${Auth.token}`;
+  const token = Auth.token || localStorage.getItem("acv_token");
+  
+  if (auth && token) headers["Authorization"] = `Bearer ${token}`;
 
   const resp = await fetch(`${API_BASE}${path}`, {
     method,
