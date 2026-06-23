@@ -50,7 +50,7 @@ async function apiFetch(path, { method = "GET", body, auth = true } = {}) {
 
   if (resp.status === 401) {
     Auth.limpiar();
-    window.location.href = "/";
+    //window.location.href = "/";
     return;
   }
 
