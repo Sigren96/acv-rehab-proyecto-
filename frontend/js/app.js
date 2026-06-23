@@ -98,7 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
     tbody.innerHTML = `<tr><td colspan="6" class="text-center muted">Cargando...</td></tr>`;
     try {
       const pacientes = await ApiPacientes.listar();
-      if (!pacientes.length) {
+      if (!pacientes || pacientes.length === 0) {
         tbody.innerHTML = `<tr><td colspan="6" class="text-center muted">Sin pacientes registrados. Agrega uno.</td></tr>`;
         return;
       }
