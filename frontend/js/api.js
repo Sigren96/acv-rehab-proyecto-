@@ -8,8 +8,9 @@
 // En producción, usa el dominio de Railway con protocolo WSS seguro
 const API_BASE = window.ENV_API_BASE || "https://acv-rehab-proyecto-production.up.railway.app/api/v1";
 // WS_BASE explícito con wss:// para evitar problemas de contenido mixto en producción
+// Incluye /api/v1 porque el router de FastAPI se monta con prefix="/api/v1"
 // NOTA: Sin /ws al final porque los métodos conectarTerapeuta/conectarPaciente ya lo añaden
-const WS_BASE  = "wss://acv-rehab-proyecto-production.up.railway.app";
+const WS_BASE  = "wss://acv-rehab-proyecto-production.up.railway.app/api/v1";
 
 // ── Estado global de sesión ───────────────────────────────────────────────────
 const Auth = {
