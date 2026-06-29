@@ -5,7 +5,8 @@
  */
 
 document.addEventListener("DOMContentLoaded", () => {
-  const { Auth, wsManager, showToast } = window.ACV;
+  const { Auth, 
+    Manager, showToast } = window.ACV;
   const AudioEngine = window.AudioEngine;
 
   // ── Referencias DOM ────────────────────────────────────────────────────
