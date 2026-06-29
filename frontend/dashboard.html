@@ -214,8 +214,12 @@
           <div>
             <h2 style="font-size:1.1rem;font-weight:700;">Monitoreo en Tiempo Real</h2>
             <p class="muted">Datos del MPU6050 en vivo y métricas por ronda.</p>
+            <p class="muted" style="font-size:0.85rem;margin-top:4px;">
+              Paciente: <strong id="monitor-paciente-nombre">—</strong>
+            </p>
           </div>
           <div class="flex gap-2">
+            <button class="btn btn-primary" id="btn-iniciar-forzar">▶ Iniciar/Forzar Sesión</button>
             <button class="btn btn-danger" id="btn-abortar">⏹ Abortar sesión</button>
           </div>
         </div>

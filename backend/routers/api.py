@@ -330,6 +330,25 @@ async def recibir_telemetria(body: PaqueteTelemetria):
 # WEBSOCKET — Terapeuta
 # ════════════════════════════════════════════════════════════
 
+def is_origin_allowed(origin: str | None) -> bool:
+    """Validate WebSocket origin against allowed domains."""
+    if not origin:
+        return False
+    allowed = [
+        cfg.frontend_url,
+        "https://acv-rehab-proyecto.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    # Exact match
+    if origin in allowed:
+        return True
+    # Railway subdomains
+    if origin.startswith("https://") and (origin.endswith(".up.railway.app") or origin.endswith(".railway.app")):
+        return True
+    return False
+
+
 @router.websocket("/ws/terapeuta/{sesion_id}")
 async def ws_terapeuta(websocket: WebSocket, sesion_id: str):
     """
@@ -338,16 +357,7 @@ async def ws_terapeuta(websocket: WebSocket, sesion_id: str):
     """
     # Validar origen para WebSocket (CORS no maneja upgrade requests automáticamente)
     origin = websocket.headers.get("origin")
-    allowed_origins = [
-        cfg.frontend_url,
-        "https://acv-rehab-proyecto.vercel.app",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        # Railway domains
-        "https://*.up.railway.app",
-        "https://*.railway.app",
-    ]
-    if origin and not any(origin.startswith(o.replace("*.", "")) or origin == o for o in allowed_origins if "*" not in o) and not any(origin.endswith(o.replace("*.", "")) for o in allowed_origins if "*" in o):
+    if not is_origin_allowed(origin):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Origen no permitido")
         return
 
@@ -372,16 +382,7 @@ async def ws_paciente(websocket: WebSocket, paciente_id: str):
     """
     # Validar origen para WebSocket (CORS no maneja upgrade requests automáticamente)
     origin = websocket.headers.get("origin")
-    allowed_origins = [
-        cfg.frontend_url,
-        "https://acv-rehab-proyecto.vercel.app",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        # Railway domains
-        "https://*.up.railway.app",
-        "https://*.railway.app",
-    ]
-    if origin and not any(origin.startswith(o.replace("*.", "")) or origin == o for o in allowed_origins if "*" not in o) and not any(origin.endswith(o.replace("*.", "")) for o in allowed_origins if "*" in o):
+    if not is_origin_allowed(origin):
         await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Origen no permitido")
         return
 

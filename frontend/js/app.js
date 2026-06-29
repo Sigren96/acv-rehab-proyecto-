@@ -207,8 +207,13 @@ document.addEventListener("DOMContentLoaded", () => {
       sesionActivaId = sesion.id;
       document.getElementById("sesion-id-display").textContent = sesion.id.slice(0, 8) + "...";
       document.getElementById("sesion-id-pico").value = sesion.id;
+      
+      // Obtener nombre del paciente del select
+      const pacienteSelect = document.getElementById("sesion-paciente-id");
+      const pacienteNombre = pacienteSelect.options[pacienteSelect.selectedIndex].text;
+      
       mostrarVista("monitoreo");
-      iniciarMonitoreo(sesion);
+      iniciarMonitoreo(sesion, pacienteNombre);
     } catch (err) {
       showToast(err.message, "error");
     } finally {
@@ -241,9 +246,15 @@ document.addEventListener("DOMContentLoaded", () => {
   // VISTA: MONITOREO EN TIEMPO REAL
   // ════════════════════════════════════════════════════════════
 
-  function iniciarMonitoreo(sesion) {
+  function iniciarMonitoreo(sesion, pacienteNombre) {
     inicializarChartXYZ();
     actualizarEstadoDispositivo("esperando");
+
+    // Mostrar nombre del paciente en el header del monitoreo
+    const headerMonitoreo = document.querySelector("#view-monitoreo h2");
+    if (headerMonitoreo && pacienteNombre) {
+      headerMonitoreo.textContent = `Monitoreo en Tiempo Real — ${pacienteNombre}`;
+    }
 
     // Conectar WebSocket del terapeuta
     wsManager.conectarTerapeuta(sesion.id);
@@ -251,10 +262,7 @@ document.addEventListener("DOMContentLoaded", () => {
     wsManager
       .on("open", () => {
         actualizarEstadoDispositivo("conectado");
-        // Iniciar la sesión en el backend
-        ApiSesiones.iniciar(sesion.id)
-          .then(() => showToast("Sesión iniciada. Esperando la Pico...", "info"))
-          .catch(e => showToast(e.message, "error"));
+        showToast("Conectado al servidor. Presione 'Iniciar/Forzar Sesión' para comenzar.", "info");
       })
 
       .on("sesion_inicio", (payload) => {
@@ -305,6 +313,17 @@ document.addEventListener("DOMContentLoaded", () => {
       wsManager.desconectar();
       showToast("Sesión abortada.", "warning");
       sesionActivaId = null;
+    } catch (e) {
+      showToast(e.message, "error");
+    }
+  });
+
+  // Handler para "Iniciar/Forzar Sesión"
+  document.getElementById("btn-iniciar-forzar")?.addEventListener("click", async () => {
+    if (!sesionActivaId) return;
+    try {
+      await ApiSesiones.iniciar(sesionActivaId);
+      showToast("Sesión iniciada/forzada. Esperando la Pico...", "info");
     } catch (e) {
       showToast(e.message, "error");
     }

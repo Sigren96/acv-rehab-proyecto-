@@ -3,8 +3,9 @@ main.py
 Punto de entrada del servidor FastAPI.
 Ejecutar con: uvicorn main:app --reload
 """
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from contextlib import asynccontextmanager
 
 from core.config import get_settings
@@ -32,9 +33,50 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# ── Custom CORS Middleware for WebSocket ─────────────────────────────────────
+# This middleware handles CORS for WebSocket upgrade requests which CORSMiddleware doesn't handle
+@app.middleware("http")
+async def websocket_cors_middleware(request: Request, call_next):
+    # Handle preflight OPTIONS requests
+    if request.method == "OPTIONS":
+        response = Response()
+    else:
+        response = await call_next(request)
+    
+    # Get origin from request
+    origin = request.headers.get("origin")
+    
+    # Define allowed origins (including Railway patterns)
+    allowed_origins = [
+        cfg.frontend_url,
+        "https://acv-rehab-proyecto.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ]
+    
+    # Check if origin matches allowed patterns (including Railway subdomains)
+    def is_origin_allowed(origin: str) -> bool:
+        if not origin:
+            return False
+        for allowed in allowed_origins:
+            if origin == allowed:
+                return True
+        # Check Railway subdomains
+        if origin.startswith("https://") and (origin.endswith(".up.railway.app") or origin.endswith(".railway.app")):
+            return True
+        return False
+    
+    if origin and is_origin_allowed(origin):
+        response.headers["Access-Control-Allow-Origin"] = origin
+        response.headers["Access-Control-Allow-Credentials"] = "true"
+        response.headers["Access-Control-Allow-Methods"] = "GET, POST, PUT, DELETE, OPTIONS"
+        response.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, Upgrade, Connection, Sec-WebSocket-Key, Sec-WebSocket-Version, Sec-WebSocket-Protocol"
+    
+    return response
+
+
 # ── CORS ─────────────────────────────────────────────────────────────────────
 # En producción cambia allow_origins al dominio exacto de Vercel.
-# Incluye dominios de Railway para WebSocket upgrade requests
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -42,9 +84,6 @@ app.add_middleware(
         "https://acv-rehab-proyecto.vercel.app",
         "http://localhost:3000",
         "http://127.0.0.1:3000",
-        # Railway domains (wildcard patterns handled in WebSocket endpoints)
-        "https://*.up.railway.app",
-        "https://*.railway.app",
     ],
     allow_credentials=True,
     allow_methods=["*"],
