@@ -18,7 +18,7 @@ import random
 import time
 import uuid
 from datetime import datetime, timezone
-from typing import Optional, List
+from typing import Any, Optional, List
 
 from core.config import get_settings
 from core.database import get_supabase
@@ -110,7 +110,7 @@ class ProcesadorIMU:
 
     # ── Procesamiento principal ──────────────────────────────────────────
 
-    def procesar_paquete(self, muestras: List[MuestraIMU]) -> Optional[dict]:
+    def procesar_paquete(self, muestras: List[Any]) -> Optional[dict]:
         """
         Procesa un paquete de 10 muestras.
         Retorna un dict con el resultado de la ronda si ya terminó, o None si sigue.
@@ -268,7 +268,7 @@ class SesionFSM:
         self.estado = "estimulo"
         return self.procesador
 
-    def procesar_paquete(self, muestras: List[MuestraIMU]) -> Optional[dict]:
+    def procesar_paquete(self, muestras: List[Any]) -> Optional[dict]:
         """Delega al procesador activo; si no hay ronda activa retorna None."""
         if self.procesador is None or self.estado != "estimulo":
             return None
