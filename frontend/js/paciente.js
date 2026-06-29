@@ -67,11 +67,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     .on("sesion_fin", (payload) => {
       mostrarFin(payload);
-      // Auto-redirect to index.html after 5 seconds showing final results
-      setTimeout(() => {
-        Auth.limpiar();
-        window.location.href = "/index.html";
-      }, 5000);
+      // Flujo manual: el paciente debe hacer clic en "Terminar y Volver al Inicio"
     })
 
     .on("close", () => {
