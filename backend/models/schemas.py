@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from typing import Literal, Optional, List
 from datetime import datetime
 import uuid
+import json
 
 
 # ─────────────────────────────────────────
@@ -26,7 +27,7 @@ class MuestraIMU(BaseModel):
 class PaqueteTelemetria(BaseModel):
     """Paquete que envía la Pico cada 500 ms (10 muestras × 50 ms)."""
     sesion_id: str = Field(..., description="UUID de la sesión activa")
-    muestras:  List[MuestraIMU] = Field(..., min_length=10, max_length=10)
+    muestras:  List[MuestraIMU] = Field(..., min_length=1, max_length=100, description="Lista de muestras IMU (típicamente 10)")
 
 
 # ─────────────────────────────────────────
@@ -148,3 +149,17 @@ class WsEstimulo(BaseModel):
 class WsLoginPaciente(BaseModel):
     """El paciente se identifica con su PIN al conectarse por WebSocket."""
     pin: str
+
+# Asegúrate de que sesion_id sea un string UUID válido
+# Ejemplo: "550e8400-e29b-41d4-a716-446655440000"
+
+payload = {
+    "sesion_id": sesion_id,  # Debe ser string
+    "muestras": muestras  # Lista de 10 diccionarios con x,y,z,gx,gy,gz
+}
+
+response = urequests.post(
+    "https://tu-backend.railway.app/api/v1/telemetria",
+    headers={"Content-Type": "application/json"},
+    data=json.dumps(payload)
+)

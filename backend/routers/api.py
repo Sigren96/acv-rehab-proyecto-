@@ -300,22 +300,30 @@ async def recibir_telemetria(body: PaqueteTelemetria):
     Endpoint que la Raspberry Pi Pico llama cada 500 ms via urequests.post().
     No requiere autenticación de usuario (autenticado por sesion_id válido).
     """
-    db = get_supabase()
+    try:
+        db = get_supabase()
 
-    # Verificar que la sesión existe y está en curso
-    res = db.table("sesiones").select("id, estado").eq("id", body.sesion_id).single().execute()
-    if not res.data or res.data["estado"] != "en_curso":
-        return {"ok": False, "razon": "Sesión no activa"}
+        # Verificar sesión
+        res = db.table("sesiones").select("id, estado").eq("id", body.sesion_id).single().execute()
+        if not res.data or res.data["estado"] != "en_curso":
+            return {"ok": False, "razon": "Sesión no activa"}
 
-    # Actualizar ping del dispositivo
-    db.table("dispositivos_pico").upsert({
-        "sesion_id":   body.sesion_id,
-        "ultimo_ping": "now()",
-    }, on_conflict="sesion_id").execute()
+        # Actualizar ping
+        db.table("dispositivos_pico").upsert({
+            "sesion_id": body.sesion_id,
+            "ultimo_ping": "now()",
+        }, on_conflict="sesion_id").execute()
 
-    # Delegar al ConnectionManager (FSM + broadcast WebSocket)
-    await manager.procesar_telemetria(body.sesion_id, body.muestras)
-    return {"ok": True}
+        # Procesar telemetría
+        await manager.procesar_telemetria(body.sesion_id, body.muestras)
+        return {"ok": True}
+
+    except Exception as e:
+        import traceback
+        print(f"ERROR en telemetría: {e}")
+        print(traceback.format_exc())
+        # En producción, loguear pero no exponer detalles
+        raise HTTPException(status_code=500, detail="Error interno al procesar telemetría")
 
 
 # ════════════════════════════════════════════════════════════

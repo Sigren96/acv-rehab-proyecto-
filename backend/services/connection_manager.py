@@ -213,25 +213,52 @@ class ConnectionManager:
         Llamado por el router de telemetría cada vez que llega un paquete HTTP POST.
         Delega a la FSM y retransmite datos crudos al frontend via WebSocket.
         """
-        slot = self.sesiones_activas.get(sesion_id)
-        if not slot or not slot["fsm"]:
-            return
+        try:
+            slot = self.sesiones_activas.get(sesion_id)
+            if not slot or not slot.get("fsm"):
+                return  # Sesión no iniciada o ya finalizada
 
-        fsm: SesionFSM = slot["fsm"]
+            fsm: SesionFSM = slot["fsm"]
 
-        # Retransmitir datos crudos al frontend (streaming en vivo)
-        await self.broadcast(sesion_id, {
-            "tipo": "telemetria",
-            "payload": {
-                "muestras": [m.model_dump() for m in muestras],
-                "ts": time.time(),
-            },
-        })
+            # Validar que muestras sea lista
+            if not isinstance(muestras, list):
+                print(f"ERROR: muestras no es lista, es {type(muestras)}")
+                return
 
-        # Procesar con FSM
-        resultado = fsm.procesar_paquete(muestras)
-        if resultado is not None:
-            slot["_ultimo_resultado"] = resultado
+            # Retransmitir datos crudos al frontend (con manejo seguro)
+            try:
+                muestras_dict = []
+                for m in muestras:
+                    if hasattr(m, 'model_dump'):
+                        muestras_dict.append(m.model_dump())
+                    elif isinstance(m, dict):
+                        muestras_dict.append(m)
+                    else:
+                        print(f"ERROR: muestra no válida: {type(m)}")
+                        continue
+
+                await self.broadcast(sesion_id, {
+                    "tipo": "telemetria",
+                    "payload": {
+                        "muestras": muestras_dict,
+                        "ts": time.time(),
+                    },
+                })
+            except Exception as e:
+                print(f"ERROR al retransmitir telemetría: {e}")
+
+            # Procesar con FSM
+            try:
+                resultado = fsm.procesar_paquete(muestras)
+                if resultado is not None:
+                    slot["_ultimo_resultado"] = resultado
+            except Exception as e:
+                print(f"ERROR en FSM al procesar paquete: {e}")
+
+        except Exception as e:
+            print(f"ERROR general en procesar_telemetria: {e}")
+            import traceback
+            print(traceback.format_exc())
 
     # ── Finalizar sesión ─────────────────────────────────────────────────
 

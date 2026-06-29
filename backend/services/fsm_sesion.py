@@ -87,9 +87,19 @@ class ProcesadorIMU:
     # ── Utilidades ──────────────────────────────────────────────────────
 
     @staticmethod
-    def magnitud_sin_gravedad(m: MuestraIMU) -> float:
+    def _get_valor(m, campo: str) -> float:
+        """Obtiene un valor numérico de una muestra, ya sea dict o objeto Pydantic."""
+        if isinstance(m, dict):
+            return float(m.get(campo, 0.0))
+        return float(getattr(m, campo, 0.0))
+
+    @staticmethod
+    def magnitud_sin_gravedad(m) -> float:
         """√(x² + y² + (z-1)²) — elimina la constante de gravedad en Z."""
-        return math.sqrt(m.x**2 + m.y**2 + (m.z - 1.0)**2)
+        x = ProcesadorIMU._get_valor(m, 'x')
+        y = ProcesadorIMU._get_valor(m, 'y')
+        z = ProcesadorIMU._get_valor(m, 'z')
+        return math.sqrt(x**2 + y**2 + (z - 1.0)**2)
 
     @staticmethod
     def varianza(valores: List[float]) -> float:
@@ -105,54 +115,77 @@ class ProcesadorIMU:
         Procesa un paquete de 10 muestras.
         Retorna un dict con el resultado de la ronda si ya terminó, o None si sigue.
         """
-        elapsed_ms = int((time.monotonic() - self.t0) * 1000)
+        try:
+            elapsed_ms = int((time.monotonic() - self.t0) * 1000)
 
-        # — Timeout —
-        if elapsed_ms > int(self.tmax_seg * 1000):
-            return self._cerrar_ronda("timeout")
+            # Timeout check
+            if elapsed_ms > int(self.tmax_seg * 1000):
+                return self._cerrar_ronda("timeout")
 
-        for muestra in muestras:
-            # Integración del giroscopio (eje correspondiente al ejercicio)
-            eje_giro = self._eje_giroscopio()
-            vel_angular = getattr(muestra, eje_giro)
-            self.angulo_acum += vel_angular * cfg.dt_muestreo
+            for muestra in muestras:
+                # Validar que la muestra tenga los campos necesarios (dict o objeto)
+                campos_requeridos = ['x', 'y', 'z', 'gx', 'gy', 'gz']
+                if isinstance(muestra, dict):
+                    if not all(c in muestra for c in campos_requeridos):
+                        print(f"ERROR: Muestra IMU incompleta (dict): {muestra}")
+                        continue
+                elif not all(hasattr(muestra, c) for c in campos_requeridos):
+                    print(f"ERROR: Muestra IMU incompleta (obj): {muestra}")
+                    continue
 
-            # Acumular magnitudes para Tasa de Temblor (siempre)
-            self.muestras_nogo.append(self.magnitud_sin_gravedad(muestra))
+                # Integración del giroscopio
+                eje_giro = self._eje_giroscopio()
+                vel_angular = self._get_valor(muestra, eje_giro)
+                self.angulo_acum += vel_angular * cfg.dt_muestreo
 
-            # ── GO: detectar movimiento en la dirección objetivo ──
-            if self.tipo_estimulo == "GO" and not self.movimiento_detectado:
-                if self.patron == "rotacion":
-                    # Círculos: velocidad angular sostenida en Z
-                    if abs(muestra.gz) >= cfg.umbral_giro_z:
-                        self.paquetes_giro_z += 1
+                # Acumular magnitudes para Tasa de Temblor
+                try:
+                    mag = self.magnitud_sin_gravedad(muestra)
+                    self.muestras_nogo.append(mag)
+                except Exception as e:
+                    print(f"ERROR al calcular magnitud: {e}")
+                    continue
+
+                # ── GO: detectar movimiento en la dirección objetivo ──
+                if self.tipo_estimulo == "GO" and not self.movimiento_detectado:
+                    if self.patron == "rotacion":
+                        # Círculos: velocidad angular sostenida en Z
+                        gz = self._get_valor(muestra, 'gz')
+                        if abs(gz) >= cfg.umbral_giro_z:
+                            self.paquetes_giro_z += 1
+                        else:
+                            self.paquetes_giro_z = 0
+                        if self.paquetes_giro_z >= cfg.ventana_giro_paquetes:
+                            self.movimiento_detectado = True
+                            self.latencia_ms = elapsed_ms
+                            return self._cerrar_ronda("acierto")
                     else:
-                        self.paquetes_giro_z = 0
-                    if self.paquetes_giro_z >= cfg.ventana_giro_paquetes:
-                        self.movimiento_detectado = True
-                        self.latencia_ms = elapsed_ms
-                        return self._cerrar_ronda("acierto")
-                else:
-                    # Movimiento lineal: umbral de fuerza G en eje objetivo
-                    eje, sentido = DIRECCION_MAP.get(self.direccion, ("x", 1))
-                    valor = getattr(muestra, eje)
-                    if sentido == 1 and valor > self.umbral_g:
-                        self.movimiento_detectado = True
-                        self.latencia_ms = elapsed_ms
-                        return self._cerrar_ronda("acierto")
-                    elif sentido == -1 and valor < -self.umbral_g:
-                        self.movimiento_detectado = True
-                        self.latencia_ms = elapsed_ms
-                        return self._cerrar_ronda("acierto")
+                        # Movimiento lineal: umbral de fuerza G en eje objetivo
+                        eje, sentido = DIRECCION_MAP.get(self.direccion, ("x", 1))
+                        valor = self._get_valor(muestra, eje)
+                        if sentido == 1 and valor > self.umbral_g:
+                            self.movimiento_detectado = True
+                            self.latencia_ms = elapsed_ms
+                            return self._cerrar_ronda("acierto")
+                        elif sentido == -1 and valor < -self.umbral_g:
+                            self.movimiento_detectado = True
+                            self.latencia_ms = elapsed_ms
+                            return self._cerrar_ronda("acierto")
 
-            # ── NO-GO: detectar movimiento indebido ──
-            elif self.tipo_estimulo == "NO-GO":
-                mag = self.magnitud_sin_gravedad(muestra)
-                if mag > self.umbral_g:
-                    # Se movió cuando no debía
-                    return self._cerrar_ronda("error")
+                # ── NO-GO: detectar movimiento indebido ──
+                elif self.tipo_estimulo == "NO-GO":
+                    mag = self.magnitud_sin_gravedad(muestra)
+                    if mag > self.umbral_g:
+                        # Se movió cuando no debía
+                        return self._cerrar_ronda("error")
 
-        return None  # Ronda sigue abierta
+            return None  # Ronda sigue abierta
+
+        except Exception as e:
+            print(f"ERROR en procesar_paquete: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return self._cerrar_ronda("error")  # Cerrar ronda con error en lugar de crash
 
     def _eje_giroscopio(self) -> str:
         """Retorna el atributo gx/gy/gz según la dirección del ejercicio."""
