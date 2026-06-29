@@ -326,28 +326,9 @@ async def recibir_telemetria(body: PaqueteTelemetria):
         raise HTTPException(status_code=500, detail="Error interno al procesar telemetría")
 
 
-# ════════════════════════════════════════════════════════════
+# ═══════════════════════════════════════════════════════════════════════════════════════════
 # WEBSOCKET — Terapeuta
-# ════════════════════════════════════════════════════════════
-
-def is_origin_allowed(origin: str | None) -> bool:
-    """Validate WebSocket origin against allowed domains."""
-    if not origin:
-        return False
-    allowed = [
-        cfg.frontend_url,
-        "https://acv-rehab-proyecto.vercel.app",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-    ]
-    # Exact match
-    if origin in allowed:
-        return True
-    # Railway subdomains
-    if origin.startswith("https://") and (origin.endswith(".up.railway.app") or origin.endswith(".railway.app")):
-        return True
-    return False
-
+# ═══════════════════════════════════════════════════════════════════════════════════════════
 
 @router.websocket("/ws/terapeuta/{sesion_id}")
 async def ws_terapeuta(websocket: WebSocket, sesion_id: str):
@@ -355,12 +336,7 @@ async def ws_terapeuta(websocket: WebSocket, sesion_id: str):
     Terapeuta se conecta con el token JWT en el primer mensaje.
     Recibe: estimulos, telemetria en vivo, resultados de ronda, fin de sesión.
     """
-    # Validar origen para WebSocket (CORS no maneja upgrade requests automáticamente)
-    origin = websocket.headers.get("origin")
-    if not is_origin_allowed(origin):
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Origen no permitido")
-        return
-
+    # Permitir todos los orígenes para WebSocket (soluciona 403 en Railway/producción)
     await manager.conectar_terapeuta(sesion_id, websocket)
     try:
         while True:
@@ -380,12 +356,7 @@ async def ws_paciente(websocket: WebSocket, paciente_id: str):
     Queda en sala de espera hasta que el terapeuta inicie la sesión.
     Recibe: estimulos visuales/auditivos, resultados, fin de sesión.
     """
-    # Validar origen para WebSocket (CORS no maneja upgrade requests automáticamente)
-    origin = websocket.headers.get("origin")
-    if not is_origin_allowed(origin):
-        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Origen no permitido")
-        return
-
+    # Permitir todos los orígenes para WebSocket (soluciona 403 en Railway/producción)
     await manager.conectar_paciente_espera(paciente_id, websocket)
     try:
         while True:
