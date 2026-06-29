@@ -140,6 +140,11 @@ class ResultadoRondaOut(BaseModel):
 # WEBSOCKET — Mensajes internos del servidor
 # ─────────────────────────────────────────
 
+class WsLoginPaciente(BaseModel):
+    """Mensaje de login del paciente vía WebSocket (PIN de acceso)."""
+    pin: str = Field(..., min_length=4, max_length=8, description="PIN de acceso del paciente")
+
+
 class WsEstimulo(BaseModel):
     """Mensaje que el backend envía al frontend vía WebSocket."""
     tipo: Literal["estimulo", "resultado_ronda", "telemetria", "sesion_fin", "sesion_inicio", "ping"]
