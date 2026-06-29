@@ -821,3 +821,27 @@ tr:hover td { background: var(--azul-suave); }
 @media (max-width: 768px) {
   .sidebar-overlay.open { display: block; }
 }
+
+/* ════════════════════════════════════════════════════════════
+   SIDEBAR COLLAPSED STATE (Desktop)
+════════════════════════════════════════════════════════════ */
+
+@media (min-width: 769px) {
+  .sidebar.collapsed { width: 72px; }
+  .sidebar.collapsed .sidebar-logo h1,
+  .sidebar.collapsed .sidebar-logo span,
+  .sidebar.collapsed .nav-item span,
+  .sidebar.collapsed .nav-section-label,
+  .sidebar.collapsed .sidebar-user { display: none; }
+  .sidebar.collapsed .nav-item { justify-content: center; padding: 10px; }
+  .sidebar.collapsed .sidebar-footer { padding: 12px; }
+  .sidebar.collapsed .btn { padding: 8px; font-size: 0; }
+  .sidebar.collapsed .btn::before { content: ""; }
+  .sidebar.collapsed .user-avatar { margin: 0 auto; }
+  .sidebar.collapsed .sidebar-logo { justify-content: center; padding: 16px 0; }
+  
+  .main-content.sidebar-collapsed { margin-left: 72px; }
+  
+  .sidebar-toggle svg { transition: transform var(--trans-fast); }
+  .sidebar.collapsed .sidebar-toggle svg { transform: rotate(180deg); }
+}
