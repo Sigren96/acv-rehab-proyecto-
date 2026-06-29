@@ -336,6 +336,21 @@ async def ws_terapeuta(websocket: WebSocket, sesion_id: str):
     Terapeuta se conecta con el token JWT en el primer mensaje.
     Recibe: estimulos, telemetria en vivo, resultados de ronda, fin de sesión.
     """
+    # Validar origen para WebSocket (CORS no maneja upgrade requests automáticamente)
+    origin = websocket.headers.get("origin")
+    allowed_origins = [
+        cfg.frontend_url,
+        "https://acv-rehab-proyecto.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # Railway domains
+        "https://*.up.railway.app",
+        "https://*.railway.app",
+    ]
+    if origin and not any(origin.startswith(o.replace("*.", "")) or origin == o for o in allowed_origins if "*" not in o) and not any(origin.endswith(o.replace("*.", "")) for o in allowed_origins if "*" in o):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Origen no permitido")
+        return
+
     await manager.conectar_terapeuta(sesion_id, websocket)
     try:
         while True:
@@ -355,6 +370,21 @@ async def ws_paciente(websocket: WebSocket, paciente_id: str):
     Queda en sala de espera hasta que el terapeuta inicie la sesión.
     Recibe: estimulos visuales/auditivos, resultados, fin de sesión.
     """
+    # Validar origen para WebSocket (CORS no maneja upgrade requests automáticamente)
+    origin = websocket.headers.get("origin")
+    allowed_origins = [
+        cfg.frontend_url,
+        "https://acv-rehab-proyecto.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # Railway domains
+        "https://*.up.railway.app",
+        "https://*.railway.app",
+    ]
+    if origin and not any(origin.startswith(o.replace("*.", "")) or origin == o for o in allowed_origins if "*" not in o) and not any(origin.endswith(o.replace("*.", "")) for o in allowed_origins if "*" in o):
+        await websocket.close(code=status.WS_1008_POLICY_VIOLATION, reason="Origen no permitido")
+        return
+
     await manager.conectar_paciente_espera(paciente_id, websocket)
     try:
         while True:

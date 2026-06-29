@@ -34,9 +34,18 @@ app = FastAPI(
 
 # ── CORS ─────────────────────────────────────────────────────────────────────
 # En producción cambia allow_origins al dominio exacto de Vercel.
+# Incluye dominios de Railway para WebSocket upgrade requests
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[cfg.frontend_url, "https://acv-rehab-proyecto.vercel.app", "http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        cfg.frontend_url,
+        "https://acv-rehab-proyecto.vercel.app",
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        # Railway domains (wildcard patterns handled in WebSocket endpoints)
+        "https://*.up.railway.app",
+        "https://*.railway.app",
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
