@@ -8,7 +8,8 @@
 // En producción, usa el dominio de Railway con protocolo WSS seguro
 const API_BASE = window.ENV_API_BASE || "https://acv-rehab-proyecto-production.up.railway.app/api/v1";
 // WS_BASE explícito con wss:// para evitar problemas de contenido mixto en producción
-const WS_BASE  = "wss://acv-rehab-proyecto-production.up.railway.app/ws";
+// NOTA: Sin /ws al final porque los métodos conectarTerapeuta/conectarPaciente ya lo añaden
+const WS_BASE  = "wss://acv-rehab-proyecto-production.up.railway.app";
 
 // ── Estado global de sesión ───────────────────────────────────────────────────
 const Auth = {
