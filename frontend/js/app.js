@@ -299,8 +299,7 @@ document.addEventListener("DOMContentLoaded", () => {
         mostrarResumenFinal(payload);
         showToast("Sesión finalizada correctamente.", "success");
         window.AudioEngine?.finSesion();
-        // Limpiar pantalla de monitoreo después de mostrar resumen
-        limpiarPantallaMonitoreo();
+        // NO limpiar automáticamente: el terapeuta decide cuándo limpiar con el botón "Limpiar Dashboard"
       })
 
       .on("error", () => actualizarEstadoDispositivo("error"))
@@ -320,6 +319,12 @@ document.addEventListener("DOMContentLoaded", () => {
     } catch (e) {
       showToast(e.message, "error");
     }
+  });
+
+  // Handler para "Limpiar Dashboard" - limpieza manual por el terapeuta
+  document.getElementById("btn-limpiar-dashboard")?.addEventListener("click", () => {
+    limpiarPantallaMonitoreo();
+    showToast("Dashboard limpiado. Listo para el siguiente paciente.", "info");
   });
 
   // Handler para "Iniciar/Forzar Sesión"
