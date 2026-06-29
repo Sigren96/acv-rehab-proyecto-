@@ -146,20 +146,4 @@ class WsEstimulo(BaseModel):
     payload: dict
 
 
-class WsLoginPaciente(BaseModel):
-    """El paciente se identifica con su PIN al conectarse por WebSocket."""
-    pin: str
 
-# Asegúrate de que sesion_id sea un string UUID válido
-# Ejemplo: "550e8400-e29b-41d4-a716-446655440000"
-
-payload = {
-    "sesion_id": sesion_id,  # Debe ser string
-    "muestras": muestras  # Lista de 10 diccionarios con x,y,z,gx,gy,gz
-}
-
-response = urequests.post(
-    "https://tu-backend.railway.app/api/v1/telemetria",
-    headers={"Content-Type": "application/json"},
-    data=json.dumps(payload)
-)
