@@ -299,6 +299,8 @@ document.addEventListener("DOMContentLoaded", () => {
         mostrarResumenFinal(payload);
         showToast("Sesión finalizada correctamente.", "success");
         window.AudioEngine?.finSesion();
+        // Limpiar pantalla de monitoreo después de mostrar resumen
+        limpiarPantallaMonitoreo();
       })
 
       .on("error", () => actualizarEstadoDispositivo("error"))
@@ -313,6 +315,8 @@ document.addEventListener("DOMContentLoaded", () => {
       wsManager.desconectar();
       showToast("Sesión abortada.", "warning");
       sesionActivaId = null;
+      // Limpiar pantalla de monitoreo
+      limpiarPantallaMonitoreo();
     } catch (e) {
       showToast(e.message, "error");
     }
@@ -446,6 +450,47 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       </div>
     `;
+  }
+
+  // ── Limpiar pantalla de monitoreo ──────────────────────────────────────
+  function limpiarPantallaMonitoreo() {
+    // Resetear contadores
+    contAciertos = 0;
+    contErrores = 0;
+    document.getElementById("monitor-aciertos").textContent = "0";
+    document.getElementById("monitor-errores").textContent = "0";
+    document.getElementById("monitor-ronda-actual").textContent = "0/—";
+    document.getElementById("monitor-rondas-total").textContent = "—";
+    document.getElementById("monitor-dificultad").textContent = "—";
+    document.getElementById("monitor-latencia").textContent = "— ms";
+
+    // Resetear estímulo activo
+    document.getElementById("monitor-estimulo-actual").innerHTML =
+      `<span class="badge badge-pending">ESPERANDO INICIO...</span>`;
+
+    // Limpiar tabla de historial de rondas
+    const tbody = document.getElementById("tabla-rondas");
+    if (tbody) tbody.innerHTML = "";
+
+    // Limpiar nombre del paciente en el header
+    const headerMonitoreo = document.querySelector("#view-monitoreo h2");
+    if (headerMonitoreo) {
+      headerMonitoreo.textContent = "Monitoreo en Tiempo Real";
+    }
+
+    // Ocultar resumen final
+    const resumenFinal = document.getElementById("resumen-final");
+    if (resumenFinal) resumenFinal.classList.add("hidden");
+
+    // Resetear gráfico XYZ
+    if (chartXYZ) {
+      chartXYZ.destroy();
+      chartXYZ = null;
+    }
+    inicializarChartXYZ();
+
+    // Resetear estado del dispositivo
+    actualizarEstadoDispositivo("esperando");
   }
 
   // ════════════════════════════════════════════════════════════
