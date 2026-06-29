@@ -161,8 +161,19 @@ class ProcesadorIMU:
                             return self._cerrar_ronda("acierto")
                     else:
                         # Movimiento lineal: umbral de fuerza G en eje objetivo
+                        # Usar aceleración compensada de gravedad proyectada en el eje de movimiento
                         eje, sentido = DIRECCION_MAP.get(self.direccion, ("x", 1))
-                        valor = self._get_valor(muestra, eje)
+                        # Calcular vector de aceleración sin gravedad: (x, y, z-1)
+                        ax = self._get_valor(muestra, 'x')
+                        ay = self._get_valor(muestra, 'y')
+                        az = self._get_valor(muestra, 'z') - 1.0  # restar gravedad en Z
+                        # Proyectar en el eje correspondiente al movimiento
+                        if eje == 'x':
+                            valor = ax  # izquierda/derecha → eje X
+                        elif eje == 'y':
+                            valor = ay  # arriba/abajo → eje Y
+                        else:
+                            valor = 0.0
                         if sentido == 1 and valor > self.umbral_g:
                             self.movimiento_detectado = True
                             self.latencia_ms = elapsed_ms
