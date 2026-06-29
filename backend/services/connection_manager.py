@@ -230,12 +230,28 @@ class ConnectionManager:
                 muestras_dict = []
                 for m in muestras:
                     if hasattr(m, 'model_dump'):
-                        muestras_dict.append(m.model_dump())
+                        muestra = m.model_dump()
                     elif isinstance(m, dict):
-                        muestras_dict.append(m)
+                        muestra = m
                     else:
                         print(f"ERROR: muestra no válida: {type(m)}")
                         continue
+
+                    # Transformar claves x, y, z a ax, ay, az para el frontend
+                    if isinstance(muestra, dict):
+                        muestra_transformada = {}
+                        for k, v in muestra.items():
+                            if k == 'x':
+                                muestra_transformada['ax'] = v
+                            elif k == 'y':
+                                muestra_transformada['ay'] = v
+                            elif k == 'z':
+                                muestra_transformada['az'] = v
+                            else:
+                                muestra_transformada[k] = v
+                        muestras_dict.append(muestra_transformada)
+                    else:
+                        muestras_dict.append(muestra)
 
                 await self.broadcast(sesion_id, {
                     "tipo": "telemetria",
