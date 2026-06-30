@@ -220,22 +220,24 @@ class ConnectionManager:
         Llamado por el router de telemetría cada vez que llega un paquete HTTP POST.
         Delega a la FSM y retransmite datos crudos al frontend via WebSocket.
         """
+        print(f"[DIAG] procesar_telemetria INICIO sesion_id={sesion_id} num_muestras={len(muestras) if isinstance(muestras, list) else 'N/A'}")
         try:
             slot = self.sesiones_activas.get(sesion_id)
             if not slot:
-                print(f"[TELEMETRIA DROP] sesion_id={sesion_id} — slot no existe")
+                print(f"[DIAG] DROP - slot no existe sesion_id={sesion_id}")
                 return
 
             if not slot.get("fsm"):
                 slot.setdefault("buffer_pendiente", []).append(muestras)
-                print(f"[TELEMETRIA BUFFERED] sesion_id={sesion_id} paquetes_en_buffer={len(slot['buffer_pendiente'])}")
+                print(f"[DIAG] BUFFERED - FSM no lista sesion_id={sesion_id} buffer_size={len(slot['buffer_pendiente'])}")
                 return
 
             fsm: SesionFSM = slot["fsm"]
+            print(f"[DIAG] FSM encontrada, procesando {len(muestras)} muestras")
 
             # Validar que muestras sea lista
             if not isinstance(muestras, list):
-                print(f"ERROR: muestras no es lista, es {type(muestras)}")
+                print(f"[DIAG] ERROR: muestras no es lista, es {type(muestras)}")
                 return
 
             # Retransmitir datos crudos al frontend (con manejo seguro)
@@ -254,6 +256,8 @@ class ConnectionManager:
                     }
                     muestras_dict.append(muestra_transformada)
 
+                print(f"[DIAG] BROADCAST telemetría cruda - {len(muestras_dict)} muestras, primera: ax={muestras_dict[0]['ax']:.3f} ay={muestras_dict[0]['ay']:.3f} az={muestras_dict[0]['az']:.3f}")
+
                 await self.broadcast(sesion_id, {
                     "tipo": "telemetria",
                     "payload": {
@@ -261,12 +265,15 @@ class ConnectionManager:
                         "ts": time.time(),
                     },
                 })
+                print(f"[DIAG] BROADCAST completado")
             except Exception as e:
-                print(f"ERROR al retransmitir telemetría: {e}")
+                print(f"[DIAG] ERROR al retransmitir telemetría: {e}")
 
             # Procesar con FSM
             try:
+                print(f"[DIAG] Llamando fsm.procesar_paquete()...")
                 resultado = fsm.procesar_paquete(muestras)
+                print(f"[DIAG] FSM retornó: {resultado is not None}")
                 if resultado is not None:
                     # Transformar las llaves del ws_data de la FSM (x,y,z) -> (ax,ay,az)
                     # para alinear con lo que espera el frontend (Chart.js)
@@ -286,14 +293,16 @@ class ConnectionManager:
                             "temblor": ws_data.get("temblor"),
                         }
                         resultado["ws_data"] = ws_data_transformado
+                        print(f"[DIAG] ws_data transformado: win={ws_data_transformado.get('win')} latencia={ws_data_transformado.get('latencia_ms')} angulo={ws_data_transformado.get('angulo_final_deg')}")
                     slot["_ultimo_resultado"] = resultado
             except Exception as e:
-                print(f"ERROR en FSM al procesar paquete: {e}")
+                print(f"[DIAG] ERROR en FSM al procesar paquete: {e}")
 
         except Exception as e:
-            print(f"ERROR general en procesar_telemetria: {e}")
+            print(f"[DIAG] ERROR general en procesar_telemetria: {e}")
             import traceback
             print(traceback.format_exc())
+        print(f"[DIAG] procesar_telemetria FIN sesion_id={sesion_id}")
 
     # ── Finalizar sesión ─────────────────────────────────────────────────
 

@@ -112,19 +112,27 @@ class ProcesadorIMU:
         try:
             elapsed_ms = int((time.monotonic() - self.t0) * 1000)
 
+            # [DIAG] Log entrada
+            print(f"[DIAG FSM] procesar_paquete: elapsed_ms={elapsed_ms}, num_muestras={len(muestras)}, tipo_estimulo={self.tipo_estimulo}, movimiento_detectado={self.movimiento_detectado}")
+
             # Timeout check
             if elapsed_ms > int(self.tmax_seg * 1000):
+                print(f"[DIAG FSM] TIMEOUT: elapsed_ms={elapsed_ms} > tmax={self.tmax_seg*1000}")
                 return self._cerrar_ronda("timeout")
 
             # Tomar la última muestra del paquete para WebSocket en tiempo real
             ultima_muestra = muestras[-1] if muestras else None
             if ultima_muestra is None:
+                print(f"[DIAG FSM] ultima_muestra es None, retornando None")
                 return None
 
             # Extraer valores directos del acelerómetro (sin procesar)
             ax = self._get_valor(ultima_muestra, 'x')
             ay = self._get_valor(ultima_muestra, 'y')
             az = self._get_valor(ultima_muestra, 'z')
+
+            # [DIAG] Log valores crudos
+            print(f"[DIAG FSM] ultima_muestra raw: ax={ax}, ay={ay}, az={az}")
 
             # REGLA 1: Formato WebSocket Puro - llaves x, y, z intactas
             ws_data = {
@@ -138,7 +146,9 @@ class ProcesadorIMU:
             if self.tipo_estimulo == "GO" and not self.movimiento_detectado:
                 mag = self._magnitud(ax, ay, az)
                 # Umbral muy accesible: 0.2G para máxima sensibilidad
+                print(f"[DIAG FSM] GO check: mag={mag:.4f}G, threshold=0.2G, movimiento_detectado={self.movimiento_detectado}")
                 if mag > 0.2:
+                    print(f"[DIAG FSM] ACIERTO GO: mag={mag:.4f}G > 0.2G, latencia={elapsed_ms}ms")
                     self.movimiento_detectado = True
                     self.latencia_ms = elapsed_ms
                     # Registrar acierto inmediato en historial
@@ -149,11 +159,14 @@ class ProcesadorIMU:
                         "direccion": self.direccion,
                     })
                     return self._cerrar_ronda("acierto", ws_data)
+                else:
+                    print(f"[DIAG FSM] NO-GO (magnitud insuficiente): mag={mag:.4f}G <= 0.2G")
 
             # Para NO-GO: solo transmitir datos, no cerrar por movimiento
             # (la lógica de error NO-GO se maneja en el frontend o en nivel superior)
 
             # Retornar datos WebSocket para gráficas en tiempo real
+            print(f"[DIAG FSM] Retornando ws_data para gráfico: x={ax:.4f}, y={ay:.4f}, z={az:.4f}")
             return ws_data
 
         except Exception as e:

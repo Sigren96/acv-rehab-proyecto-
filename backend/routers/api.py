@@ -306,7 +306,16 @@ async def recibir_telemetria(body: PaqueteTelemetria):
         # Verificar sesión
         res = db.table("sesiones").select("id, estado").eq("id", body.sesion_id).single().execute()
         if not res.data or res.data["estado"] != "en_curso":
+            print(f"[API TELEMETRÍA] RECHAZADA - sesion_id={body.sesion_id} estado={res.data['estado'] if res.data else 'no existe'}")
             return {"ok": False, "razon": "Sesión no activa"}
+
+        # Log de entrada: primera muestra del paquete
+        primera = body.muestras[0] if body.muestras else None
+        if primera:
+            x = getattr(primera, 'x', primera.get('x') if isinstance(primera, dict) else 0.0)
+            y = getattr(primera, 'y', primera.get('y') if isinstance(primera, dict) else 0.0)
+            z = getattr(primera, 'z', primera.get('z') if isinstance(primera, dict) else 0.0)
+            print(f"[API TELEMETRÍA] ENTRADA - sesion_id={body.sesion_id} muestras={len(body.muestras)} primera_muestra: x={x:.3f} y={y:.3f} z={z:.3f}")
 
         # Actualizar ping
         db.table("dispositivos_pico").upsert({
@@ -316,6 +325,7 @@ async def recibir_telemetria(body: PaqueteTelemetria):
 
         # Procesar telemetría
         await manager.procesar_telemetria(body.sesion_id, body.muestras)
+        print(f"[API TELEMETRÍA] OK - sesion_id={body.sesion_id} procesado y delegado a manager")
         return {"ok": True}
 
     except Exception as e:
