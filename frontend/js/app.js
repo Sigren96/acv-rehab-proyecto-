@@ -407,7 +407,7 @@ document.addEventListener("DOMContentLoaded", () => {
     chartXYZ.data.datasets[0].data  = bufferXYZ.x;
     chartXYZ.data.datasets[1].data  = bufferXYZ.y;
     chartXYZ.data.datasets[2].data  = bufferXYZ.z;
-    chartXYZ.update("none");
+    chartXYZ.update();
   }
 
   // ── Tabla de rondas ────────────────────────────────────────────────────
