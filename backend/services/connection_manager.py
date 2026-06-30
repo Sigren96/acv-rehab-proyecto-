@@ -229,29 +229,17 @@ class ConnectionManager:
             try:
                 muestras_dict = []
                 for m in muestras:
-                    if hasattr(m, 'model_dump'):
-                        muestra = m.model_dump()
-                    elif isinstance(m, dict):
-                        muestra = m
-                    else:
-                        print(f"ERROR: muestra no válida: {type(m)}")
-                        continue
-
-                    # Transformar claves x, y, z a ax, ay, az para el frontend
-                    if isinstance(muestra, dict):
-                        muestra_transformada = {}
-                        for k, v in muestra.items():
-                            if k == 'x':
-                                muestra_transformada['ax'] = v
-                            elif k == 'y':
-                                muestra_transformada['ay'] = v
-                            elif k == 'z':
-                                muestra_transformada['az'] = v
-                            else:
-                                muestra_transformada[k] = v
-                        muestras_dict.append(muestra_transformada)
-                    else:
-                        muestras_dict.append(muestra)
+                    # Convertimos el objeto de Pydantic a un diccionario plano de Python
+                    d = m.model_dump() if hasattr(m, 'model_dump') else (m.__dict__ if hasattr(m, '__dict__') else dict(m))
+                    
+                    # Mapeamos explícitamente las llaves que el frontend exige para pintar la gráfica
+                    muestra_transformada = {
+                        "ax": d.get("x", 0.0),
+                        "ay": d.get("y", 0.0),
+                        "az": d.get("z", 0.0),
+                        "timestamp_ms": d.get("timestamp_ms", 0.0)
+                    }
+                    muestras_dict.append(muestra_transformada)
 
                 await self.broadcast(sesion_id, {
                     "tipo": "telemetria",
