@@ -255,6 +255,24 @@ class ConnectionManager:
             try:
                 resultado = fsm.procesar_paquete(muestras)
                 if resultado is not None:
+                    # Transformar las llaves del ws_data de la FSM (x,y,z) -> (ax,ay,az)
+                    # para alinear con lo que espera el frontend (Chart.js)
+                    ws_data = resultado.get("ws_data")
+                    if ws_data and isinstance(ws_data, dict):
+                        ws_data_transformado = {
+                            "ax": ws_data.get("x"),
+                            "ay": ws_data.get("y"),
+                            "az": ws_data.get("z"),
+                            "timestamp_ms": ws_data.get("timestamp_ms"),
+                            "gx": ws_data.get("gx"),
+                            "gy": ws_data.get("gy"),
+                            "gz": ws_data.get("gz"),
+                            "win": ws_data.get("win"),
+                            "latencia_ms": ws_data.get("latencia_ms"),
+                            "angulo_final_deg": ws_data.get("angulo_final_deg"),
+                            "temblor": ws_data.get("temblor"),
+                        }
+                        resultado["ws_data"] = ws_data_transformado
                     slot["_ultimo_resultado"] = resultado
             except Exception as e:
                 print(f"ERROR en FSM al procesar paquete: {e}")
