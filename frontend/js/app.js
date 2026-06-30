@@ -392,9 +392,9 @@ document.addEventListener("DOMContentLoaded", () => {
   function actualizarChartXYZ(muestras) {
     if (!chartXYZ || !muestras) return;
     muestras.forEach((m, i) => {
-      bufferXYZ.x.push(m.x);
-      bufferXYZ.y.push(m.y);
-      bufferXYZ.z.push(m.z);
+      bufferXYZ.x.push(m.ax);
+      bufferXYZ.y.push(m.ay);
+      bufferXYZ.z.push(m.az);
       bufferXYZ.labels.push("");
     });
 
