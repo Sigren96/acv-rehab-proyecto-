@@ -46,6 +46,7 @@ class ConnectionManager:
                 "terapeuta": None,
                 "paciente": None,
                 "estimulo_actual": None,
+                "buffer_pendiente": [],
             }
         self.sesiones_activas[sesion_id]["terapeuta"] = ws
 
@@ -96,6 +97,12 @@ class ConnectionManager:
                 "paciente": None, "estimulo_actual": None,
             }
         self.sesiones_activas[sesion_id]["fsm"] = fsm
+
+        # Procesar paquetes bufferizados durante la race condition
+        buffer_pendiente = self.sesiones_activas[sesion_id].pop("buffer_pendiente", [])
+        for muestras_pendientes in buffer_pendiente:
+            fsm.procesar_paquete(muestras_pendientes)
+        print(f"[TELEMETRIA] {len(buffer_pendiente)} paquetes recuperados del buffer al iniciar sesión {sesion_id}")
 
         # Actualizar BD
         db = get_supabase()
@@ -215,8 +222,14 @@ class ConnectionManager:
         """
         try:
             slot = self.sesiones_activas.get(sesion_id)
-            if not slot or not slot.get("fsm"):
-                return  # Sesión no iniciada o ya finalizada
+            if not slot:
+                print(f"[TELEMETRIA DROP] sesion_id={sesion_id} — slot no existe")
+                return
+
+            if not slot.get("fsm"):
+                slot.setdefault("buffer_pendiente", []).append(muestras)
+                print(f"[TELEMETRIA BUFFERED] sesion_id={sesion_id} paquetes_en_buffer={len(slot['buffer_pendiente'])}")
+                return
 
             fsm: SesionFSM = slot["fsm"]
 
