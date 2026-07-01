@@ -294,7 +294,10 @@ class ConnectionManager:
                         }
                         resultado["ws_data"] = ws_data_transformado
                         print(f"[DIAG] ws_data transformado: win={ws_data_transformado.get('win')} latencia={ws_data_transformado.get('latencia_ms')} angulo={ws_data_transformado.get('angulo_final_deg')}")
-                    slot["_ultimo_resultado"] = resultado
+                    # Solo guardar resultados finales de ronda (que tienen clave "resultado")
+                    # No guardar ws_data de streaming que no tiene esa clave
+                    if "resultado" in resultado:
+                        slot["_ultimo_resultado"] = resultado
             except Exception as e:
                 print(f"[DIAG] ERROR en FSM al procesar paquete: {e}")
 
