@@ -6,7 +6,7 @@ Organizado en prefijos: /auth, /pacientes, /sesiones, /telemetria, /ws
 import json
 import secrets
 import string
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException, WebSocket, WebSocketDisconnect, status
@@ -320,7 +320,7 @@ async def recibir_telemetria(body: PaqueteTelemetria):
         # Actualizar ping
         db.table("dispositivos_pico").upsert({
             "sesion_id": body.sesion_id,
-            "ultimo_ping": "now()",
+            "ultimo_ping": datetime.now(timezone.utc),
         }, on_conflict="sesion_id").execute()
 
         # Procesar telemetría
