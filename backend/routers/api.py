@@ -320,7 +320,7 @@ async def recibir_telemetria(body: PaqueteTelemetria):
         # Actualizar ping
         db.table("dispositivos_pico").upsert({
             "sesion_id": body.sesion_id,
-            "ultimo_ping": datetime.now(timezone.utc),
+            "ultimo_ping": datetime.now(timezone.utc).isoformat(),
         }, on_conflict="sesion_id").execute()
 
         # Procesar telemetría
