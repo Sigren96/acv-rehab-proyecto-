@@ -85,6 +85,9 @@ class ProcesadorIMU:
         self.movimiento_detectado: bool = False
         self.latencia_ms: Optional[int] = None
         self.aciertos: List[dict] = []  # Historial de aciertos para GO
+        
+        # Almacenar todas las muestras IMU de la ronda para cálculos finales
+        self.muestras_ronda: List[dict] = []
 
     @staticmethod
     def _get_valor(m, campo: str) -> float:
@@ -119,6 +122,18 @@ class ProcesadorIMU:
             if elapsed_ms > int(self.tmax_seg * 1000):
                 print(f"[DIAG FSM] TIMEOUT: elapsed_ms={elapsed_ms} > tmax={self.tmax_seg*1000}")
                 return self._cerrar_ronda("timeout")
+
+            # Almacenar todas las muestras del paquete para cálculos finales (ángulo, temblor)
+            for m in muestras:
+                self.muestras_ronda.append({
+                    "x": self._get_valor(m, 'x'),
+                    "y": self._get_valor(m, 'y'),
+                    "z": self._get_valor(m, 'z'),
+                    "gx": self._get_valor(m, 'gx'),
+                    "gy": self._get_valor(m, 'gy'),
+                    "gz": self._get_valor(m, 'gz'),
+                    "timestamp_ms": elapsed_ms,  # tiempo relativo al inicio de la ronda
+                })
 
             # Tomar la última muestra del paquete para WebSocket en tiempo real
             ultima_muestra = muestras[-1] if muestras else None
@@ -183,15 +198,113 @@ class ProcesadorIMU:
             return self._cerrar_ronda("error")
 
     def _cerrar_ronda(self, resultado: str, ws_data: dict = None) -> dict:
-        """Cierra la ronda y retorna resultado final + datos WebSocket."""
+        """Cierra la ronda y retorna resultado final + datos WebSocket + métricas calculadas."""
+        # Calcular métricas finales a partir de las muestras almacenadas
+        angulo_final_deg = self._calcular_angulo_final()
+        tasa_temblor = self._calcular_tasa_temblor()
+        
         base = {
             "resultado":        resultado,
             "latencia_ms":      self.latencia_ms,
             "aciertos":         self.aciertos,
+            "angulo_final_deg": round(angulo_final_deg, 2) if angulo_final_deg is not None else None,
+            "tasa_temblor":     round(tasa_temblor, 4) if tasa_temblor is not None else None,
         }
         if ws_data:
             base.update(ws_data)
         return base
+
+    def _calcular_angulo_final(self) -> Optional[float]:
+        """
+        Calcula el ángulo final del movimiento en grados.
+        
+        Para movimientos lineales (arriba/abajo/izquierda/derecha):
+        - Usa el acelerómetro de la última muestra para calcular el ángulo respecto a la gravedad
+        - Ángulo = atan2(eje_perpendicular, eje_movimiento) * 180/pi
+        
+        Para rotación (círculo):
+        - Integra la velocidad angular (giroscopio eje Z) sobre el tiempo
+        """
+        if not self.muestras_ronda:
+            return None
+            
+        # Usar la última muestra para el cálculo del ángulo final
+        ultima = self.muestras_ronda[-1]
+        ax, ay, az = ultima["x"], ultima["y"], ultima["z"]
+        gx, gy, gz = ultima["gx"], ultima["gy"], ultima["gz"]
+        
+        if self.patron == "rotacion" or self.direccion == "circulo":
+            # Para rotación: integrar giroscopio eje Z sobre el tiempo
+            # Ángulo = suma(gz * dt) donde dt es el intervalo entre muestras
+            angulo = 0.0
+            for i in range(1, len(self.muestras_ronda)):
+                dt = (self.muestras_ronda[i]["timestamp_ms"] - self.muestras_ronda[i-1]["timestamp_ms"]) / 1000.0  # en segundos
+                angulo += self.muestras_ronda[i]["gz"] * dt
+            return abs(angulo)  # valor absoluto del ángulo rotado
+        else:
+            # Para movimientos lineales: calcular ángulo respecto a la gravedad usando acelerómetro
+            # Mapear dirección a ejes
+            eje_map = {
+                "arriba":    ("y", "x"),    # movimiento en Y, perpendicular en X
+                "abajo":     ("y", "x"),
+                "izquierda": ("x", "y"),    # movimiento en X, perpendicular en Y
+                "derecha":   ("x", "y"),
+            }
+            
+            if self.direccion in eje_map:
+                eje_mov, eje_perp = eje_map[self.direccion]
+                val_mov = ultima[eje_mov]
+                val_perp = ultima[eje_perp]
+                # Ángulo = atan2(perpendicular, movimiento) en grados
+                angulo_rad = math.atan2(val_perp, val_mov)
+                return math.degrees(angulo_rad)
+            
+            # Fallback: ángulo genérico respecto a la vertical (eje Z)
+            # Ángulo de inclinación = acos(az / magnitud) * 180/pi
+            mag = math.sqrt(ax*ax + ay*ay + az*az)
+            if mag > 0:
+                return math.degrees(math.acos(max(-1, min(1, az / mag))))
+            return None
+
+    def _calcular_tasa_temblor(self) -> Optional[float]:
+        """
+        Calcula el índice de temblor (tasa de temblor).
+        
+        Usa la desviación estándar de la velocidad angular (giroscopio) 
+        en el eje relevante del movimiento durante la ronda.
+        
+        Un valor más alto indica más temblor/inestabilidad.
+        """
+        if not self.muestras_ronda or len(self.muestras_ronda) < 2:
+            return None
+            
+        # Determinar el eje relevante según la dirección/patrón
+        if self.patron == "rotacion" or self.direccion == "circulo":
+            eje_giro = "gz"  # rotación en eje Z
+        elif self.direccion in ("arriba", "abajo"):
+            eje_giro = "gy"  # movimiento en Y -> rotación en X (gy)
+        elif self.direccion in ("izquierda", "derecha"):
+            eje_giro = "gx"  # movimiento en X -> rotación en Y (gx)
+        else:
+            # Default: usar la magnitud del vector giroscopio
+            valores_giro = [
+                math.sqrt(m["gx"]**2 + m["gy"]**2 + m["gz"]**2) 
+                for m in self.muestras_ronda
+            ]
+            if len(valores_giro) < 2:
+                return None
+            media = sum(valores_giro) / len(valores_giro)
+            varianza = sum((v - media)**2 for v in valores_giro) / (len(valores_giro) - 1)
+            return math.sqrt(varianza)
+        
+        # Calcular desviación estándar en el eje relevante
+        valores = [m[eje_giro] for m in self.muestras_ronda]
+        if len(valores) < 2:
+            return None
+            
+        media = sum(valores) / len(valores)
+        varianza = sum((v - media)**2 for v in valores) / (len(valores) - 1)
+        return math.sqrt(varianza)
 
 
 class SesionFSM:
