@@ -252,6 +252,9 @@ class ConnectionManager:
                         "ax": d.get("x", 0.0),
                         "ay": d.get("y", 0.0),
                         "az": d.get("z", 0.0),
+                        "gx": d.get("gx", 0.0),
+                        "gy": d.get("gy", 0.0),
+                        "gz": d.get("gz", 0.0),
                         "timestamp_ms": d.get("timestamp_ms", 0.0)
                     }
                     muestras_dict.append(muestra_transformada)

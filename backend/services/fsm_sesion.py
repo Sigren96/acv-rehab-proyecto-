@@ -130,15 +130,22 @@ class ProcesadorIMU:
             ax = self._get_valor(ultima_muestra, 'x')
             ay = self._get_valor(ultima_muestra, 'y')
             az = self._get_valor(ultima_muestra, 'z')
+            # Extraer valores del giroscopio
+            gx = self._get_valor(ultima_muestra, 'gx')
+            gy = self._get_valor(ultima_muestra, 'gy')
+            gz = self._get_valor(ultima_muestra, 'gz')
 
             # [DIAG] Log valores crudos
-            print(f"[DIAG FSM] ultima_muestra raw: ax={ax}, ay={ay}, az={az}")
+            print(f"[DIAG FSM] ultima_muestra raw: ax={ax}, ay={ay}, az={az}, gx={gx}, gy={gy}, gz={gz}")
 
-            # REGLA 1: Formato WebSocket Puro - llaves x, y, z intactas
+            # REGLA 1: Formato WebSocket Puro - llaves x, y, z intactas + giroscopio
             ws_data = {
                 "x": ax,
                 "y": ay,
                 "z": az,
+                "gx": gx,
+                "gy": gy,
+                "gz": gz,
                 "timestamp_ms": elapsed_ms,
             }
 
