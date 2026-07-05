@@ -125,8 +125,14 @@ class ConnectionManager:
             },
         })
 
-        # Arrancar loop de rondas en background
-        asyncio.create_task(self._loop_rondas(sesion_id))
+        # Arrancar loop de rondas en background (solo si no hay uno activo)
+        task_existente = self.sesiones_activas[sesion_id].get("task_loop")
+        if task_existente and not task_existente.done():
+            # Ya hay un loop activo para esta sesión: reutilizarlo
+            print(f"[SESSION] Loop de rondas ya activo para {sesion_id}, reutilizando task existente")
+        else:
+            task = asyncio.create_task(self._loop_rondas(sesion_id))
+            self.sesiones_activas[sesion_id]["task_loop"] = task
 
     # ── Loop principal de rondas ─────────────────────────────────────────
 
@@ -343,6 +349,14 @@ class ConnectionManager:
         })
 
         # Limpiar slot en memoria
+        # Cancelar task del loop si sigue viva
+        task_loop = self.sesiones_activas.get(sesion_id, {}).get("task_loop")
+        if task_loop and not task_loop.done():
+            task_loop.cancel()
+            try:
+                await task_loop
+            except asyncio.CancelledError:
+                pass
         self.sesiones_activas.pop(sesion_id, None)
 
     async def abortar_sesion(self, sesion_id: str):
@@ -355,6 +369,14 @@ class ConnectionManager:
             "tipo": "sesion_fin",
             "payload": {"sesion_id": sesion_id, "abortada": True},
         })
+        # Cancelar task del loop si sigue viva
+        task_loop = self.sesiones_activas.get(sesion_id, {}).get("task_loop")
+        if task_loop and not task_loop.done():
+            task_loop.cancel()
+            try:
+                await task_loop
+            except asyncio.CancelledError:
+                pass
         self.sesiones_activas.pop(sesion_id, None)
 
     # ── Guardar resultado en Supabase ────────────────────────────────────
