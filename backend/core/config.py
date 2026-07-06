@@ -23,10 +23,10 @@ class Settings(BaseSettings):
     umbral_g_intermedio:  float = 0.55
     umbral_g_recuperado:  float = 0.73
 
-    # Timeout (tmax) por nivel de dificultad en segundos
-    tmax_facil:   float = 3.50
-    tmax_medio:   float = 1.80
-    tmax_dificil: float = 0.80
+    # Timeout (tmax) por nivel de dificultad en segundos (límites clínicos)
+    tmax_facil:   float = 15.0
+    tmax_medio:   float = 8.0
+    tmax_dificil: float = 3.0
 
     # Umbral de velocidad angular sostenida para "Círculos" (grados/segundo)
     umbral_giro_z: float = 30.0

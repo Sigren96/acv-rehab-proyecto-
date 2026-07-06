@@ -202,10 +202,12 @@ class ConnectionManager:
     async def _esperar_resultado_ronda(self, sesion_id: str, fsm: SesionFSM, t0_unix: float) -> dict:
         """
         Polling asíncrono: espera hasta que la FSM devuelva un resultado
-        (por telemetría entrante) o se cumpla el tmax + margen.
+        (por telemetría entrante) o se cumpla el tmax + gracia de red.
+        Incluye gracia de red de +2s sobre tmax para evitar falsos timeouts por latencia.
         """
-        margen_extra = 0.5  # segundos extra tras tmax para recibir el último paquete
-        deadline = time.monotonic() + fsm.tmax_seg + margen_extra
+        # Gracia de red: +2000ms sobre tmax para evitar falsos timeouts por latencia de red
+        limite_espera_ms = int(fsm.tmax_seg * 1000) + 2000
+        inicio = time.monotonic()
 
         # Limpiar bucket de resultado ANTES de entrar al bucle para evitar
         # leer el resultado de la ronda anterior (efecto fantasma)
@@ -213,48 +215,49 @@ class ConnectionManager:
         if slot:
             slot["_ultimo_resultado"] = None
 
-        while time.monotonic() < deadline:
-            await asyncio.sleep(0.1)
-            slot = self.sesiones_activas.get(sesion_id)
-            if slot and slot.get("_ultimo_resultado"):
-                resultado = slot.pop("_ultimo_resultado")
-                return resultado
-
-        # Timeout forzado
-        elapsed_ms = (time.time() - t0_unix) * 1000
-        print(f"[TIMEOUT] elapsed_ms={elapsed_ms:.1f}")
-        # Determinar resultado según el tipo de estímulo de la ronda actual
-        slot = self.sesiones_activas.get(sesion_id)
-        estimulo = slot.get("estimulo_actual") if slot else None
-        resultado_timeout = "acierto" if estimulo and estimulo.get("tipo") == "NO-GO" else "timeout"
-        
-        # Calcular métricas reales a partir de las muestras acumuladas en el procesador
-        # en lugar de usar valores hardcodeados 0.0
-        angulo_final_deg = 0.0
-        tasa_temblor = 0.0
-        if slot and slot.get("fsm") and slot["fsm"].procesador:
-            proc = slot["fsm"].procesador
-            try:
-                angulo_calc = proc._calcular_angulo_final()
-                if angulo_calc is not None:
-                    angulo_final_deg = round(angulo_calc, 2)
-            except Exception as e:
-                print(f"[TIMEOUT] Error calculando ángulo final: {e}")
+        while True:
+            await asyncio.sleep(0.05)  # 50ms polling
+            
+            # Verificar si el FSM ya tiene resultado
+            if fsm.resultado_ronda is not None:
+                return fsm.resultado_ronda
+            
+            # Timeout con gracia de red
+            elapsed_ms = int((time.monotonic() - inicio) * 1000)
+            if elapsed_ms > limite_espera_ms:
+                print(f"[WS] Timeout esperando resultado ronda (con gracia +2s): {elapsed_ms}ms > {limite_espera_ms}ms")
+                # Determinar resultado según el tipo de estímulo de la ronda actual
+                slot = self.sesiones_activas.get(sesion_id)
+                estimulo = slot.get("estimulo_actual") if slot else None
+                resultado_timeout = "acierto" if estimulo and estimulo.get("tipo") == "NO-GO" else "timeout"
+                
+                # Calcular métricas reales a partir de las muestras acumuladas en el procesador
+                # en lugar de usar valores hardcodeados 0.0
                 angulo_final_deg = 0.0
-            try:
-                temblor_calc = proc._calcular_tasa_temblor()
-                if temblor_calc is not None:
-                    tasa_temblor = round(temblor_calc, 4)
-            except Exception as e:
-                print(f"[TIMEOUT] Error calculando tasa temblor: {e}")
                 tasa_temblor = 0.0
-        
-        return {
-            "resultado":        resultado_timeout,
-            "latencia_ms":      None,
-            "angulo_final_deg": angulo_final_deg,
-            "tasa_temblor":     tasa_temblor,
-        }
+                if slot and slot.get("fsm") and slot["fsm"].procesador:
+                    proc = slot["fsm"].procesador
+                    try:
+                        angulo_calc = proc._calcular_angulo_final()
+                        if angulo_calc is not None:
+                            angulo_final_deg = round(angulo_calc, 2)
+                    except Exception as e:
+                        print(f"[TIMEOUT] Error calculando ángulo final: {e}")
+                        angulo_final_deg = 0.0
+                    try:
+                        temblor_calc = proc._calcular_tasa_temblor()
+                        if temblor_calc is not None:
+                            tasa_temblor = round(temblor_calc, 4)
+                    except Exception as e:
+                        print(f"[TIMEOUT] Error calculando tasa temblor: {e}")
+                        tasa_temblor = 0.0
+                
+                return {
+                    "resultado":        resultado_timeout,
+                    "latencia_ms":      None,
+                    "angulo_final_deg": angulo_final_deg,
+                    "tasa_temblor":     tasa_temblor,
+                }
 
     # ── Procesamiento de telemetría desde la Pico ────────────────────────
 
