@@ -183,8 +183,8 @@ class ProcesadorIMU:
                 mag_total = self._magnitud(ax, ay, az)
                 aceleracion_dinamica = abs(mag_total - 1.0)
                 
-                print(f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, threshold=0.2G, movimiento_detectado={self.movimiento_detectado}")
-                if aceleracion_dinamica >= 0.2:
+                print(f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, threshold=0.15G, movimiento_detectado={self.movimiento_detectado}")
+                if aceleracion_dinamica >= 0.15:
                     print(f"[DIAG FSM] ACIERTO GO: accel_dinamica={aceleracion_dinamica:.4f}G, latencia={elapsed_ms}ms")
                     self.movimiento_detectado = True
                     self.latencia_ms = elapsed_ms
