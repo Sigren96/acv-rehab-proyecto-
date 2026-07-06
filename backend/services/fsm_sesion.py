@@ -89,6 +89,17 @@ class ProcesadorIMU:
         # Almacenar todas las muestras IMU de la ronda para cálculos finales
         self.muestras_ronda: List[dict] = []
 
+    def limpiar_estado(self) -> None:
+        """
+        Limpia el estado interno del procesador para evitar 'efecto fantasma'
+        entre rondas. Debe llamarse antes de iniciar una nueva ronda.
+        """
+        self.muestras_ronda.clear()
+        self.movimiento_detectado = False
+        self.latencia_ms = None
+        self.aciertos.clear()
+        self.t0 = time.monotonic()
+
     @staticmethod
     def _get_valor(m, campo: str) -> float:
         """Obtiene un valor numérico de una muestra, ya sea dict o objeto Pydantic."""
@@ -362,6 +373,10 @@ class SesionFSM:
 
     def iniciar_ronda(self, estimulo: dict) -> ProcesadorIMU:
         """Crea un ProcesadorIMU fresco para la ronda activa."""
+        # Limpiar estado del procesador anterior para evitar efecto fantasma
+        if self.procesador is not None:
+            self.procesador.limpiar_estado()
+        
         self.procesador = ProcesadorIMU(
             tipo_estimulo=estimulo["tipo"],
             direccion=estimulo.get("direccion"),

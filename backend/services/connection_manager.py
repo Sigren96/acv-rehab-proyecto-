@@ -221,11 +221,33 @@ class ConnectionManager:
         slot = self.sesiones_activas.get(sesion_id)
         estimulo = slot.get("estimulo_actual") if slot else None
         resultado_timeout = "acierto" if estimulo and estimulo.get("tipo") == "NO-GO" else "timeout"
+        
+        # Calcular métricas reales a partir de las muestras acumuladas en el procesador
+        # en lugar de usar valores hardcodeados 0.0
+        angulo_final_deg = 0.0
+        tasa_temblor = 0.0
+        if slot and slot.get("fsm") and slot["fsm"].procesador:
+            proc = slot["fsm"].procesador
+            try:
+                angulo_calc = proc._calcular_angulo_final()
+                if angulo_calc is not None:
+                    angulo_final_deg = round(angulo_calc, 2)
+            except Exception as e:
+                print(f"[TIMEOUT] Error calculando ángulo final: {e}")
+                angulo_final_deg = 0.0
+            try:
+                temblor_calc = proc._calcular_tasa_temblor()
+                if temblor_calc is not None:
+                    tasa_temblor = round(temblor_calc, 4)
+            except Exception as e:
+                print(f"[TIMEOUT] Error calculando tasa temblor: {e}")
+                tasa_temblor = 0.0
+        
         return {
             "resultado":        resultado_timeout,
             "latencia_ms":      None,
-            "angulo_final_deg": 0.0,
-            "tasa_temblor":     0.0,
+            "angulo_final_deg": angulo_final_deg,
+            "tasa_temblor":     tasa_temblor,
         }
 
     # ── Procesamiento de telemetría desde la Pico ────────────────────────
@@ -249,6 +271,38 @@ class ConnectionManager:
 
             fsm: SesionFSM = slot["fsm"]
             print(f"[DIAG] FSM encontrada, procesando {len(muestras)} muestras")
+
+            # FILTRO: Descartar muestras con timestamp anterior al inicio de la ronda actual (t0_unix)
+            # Esto evita el "efecto fantasma" de muestras residuales de la ronda anterior
+            t0_unix = slot.get("t0_unix")
+            if t0_unix is not None:
+                muestras_filtradas = []
+                for m in muestras:
+                    # Obtener timestamp de la muestra (puede venir en diferentes campos)
+                    ts = None
+                    if hasattr(m, 'timestamp_ms'):
+                        ts = getattr(m, 'timestamp_ms', None)
+                    elif isinstance(m, dict):
+                        ts = m.get('timestamp_ms') or m.get('t') or m.get('timestamp')
+                    
+                    if ts is not None:
+                        try:
+                            ts_float = float(ts)
+                            # timestamp_ms está en milisegundos, t0_unix en segundos
+                            # Convertir timestamp_ms a segundos para comparar
+                            ts_seg = ts_float / 1000.0 if ts_float > 1e10 else ts_float
+                            if ts_seg >= t0_unix:
+                                muestras_filtradas.append(m)
+                            else:
+                                print(f"[DIAG CM] Muestra descartada (timestamp anterior a t0_unix): ts={ts_seg}, t0_unix={t0_unix}")
+                        except (ValueError, TypeError):
+                            muestras_filtradas.append(m)  # Si no se puede parsear, mantener
+                    else:
+                        muestras_filtradas.append(m)  # Si no tiene timestamp, mantener
+                
+                if len(muestras_filtradas) != len(muestras):
+                    print(f"[DIAG CM] Filtrado: {len(muestras)} -> {len(muestras_filtradas)} muestras")
+                muestras = muestras_filtradas
 
             # Validar que muestras sea lista
             if not isinstance(muestras, list):
