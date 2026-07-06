@@ -197,7 +197,7 @@ class ProcesadorIMU:
                     })
                     return self._cerrar_ronda("acierto", ws_data)
                 else:
-                    print(f"[DIAG FSM] NO-GO (aceleración dinámica insuficiente): accel_dinamica={aceleracion_dinamica:.4f}G, gyro={gyro_magnitud:.1f}°/s")
+                    print(f"[DIAG FSM] GO insuficiente: accel_dinamica={aceleracion_dinamica:.4f}G")
 
             # Para NO-GO: detectar movimiento indebido → error
             if self.tipo_estimulo == "NO-GO":
