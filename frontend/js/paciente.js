@@ -98,6 +98,7 @@ document.addEventListener("DOMContentLoaded", () => {
   };
 
   function mostrarEstimulo(payload) {
+    console.log("Frontend mostró GO", Date.now());
     mostrarPantalla("estimulo");
     limpiarResultadoOverlay();
 

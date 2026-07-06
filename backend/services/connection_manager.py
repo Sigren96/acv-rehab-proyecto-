@@ -156,6 +156,9 @@ class ConnectionManager:
             fsm.iniciar_ronda(estimulo)
             slot["estimulo_actual"] = estimulo
             t0_unix = time.time()
+            slot["t0_unix"] = t0_unix
+            slot["_primer_paquete_logged"] = False
+            print(f"[RONDA] Inicio: {t0_unix} estímulo={estimulo['tipo']}")
 
             estimulo_msg = {
                 "tipo": "estimulo",
@@ -171,7 +174,7 @@ class ConnectionManager:
             await self.broadcast(sesion_id, estimulo_msg)
 
             # Esperar resultado (la Pico enviará paquetes que procesará telemetria_handler)
-            resultado = await self._esperar_resultado_ronda(sesion_id, fsm)
+            resultado = await self._esperar_resultado_ronda(sesion_id, fsm, t0_unix)
 
             # Guardar métricas en Supabase
             await self._guardar_resultado(sesion_id, fsm, estimulo, resultado, fsm.ronda_actual)
@@ -196,7 +199,7 @@ class ConnectionManager:
                 await self._finalizar_sesion(sesion_id)
                 break
 
-    async def _esperar_resultado_ronda(self, sesion_id: str, fsm: SesionFSM) -> dict:
+    async def _esperar_resultado_ronda(self, sesion_id: str, fsm: SesionFSM, t0_unix: float) -> dict:
         """
         Polling asíncrono: espera hasta que la FSM devuelva un resultado
         (por telemetría entrante) o se cumpla el tmax + margen.
@@ -212,6 +215,8 @@ class ConnectionManager:
                 return resultado
 
         # Timeout forzado
+        elapsed_ms = (time.time() - t0_unix) * 1000
+        print(f"[TIMEOUT] elapsed_ms={elapsed_ms:.1f}")
         return {
             "resultado":        "timeout",
             "latencia_ms":      None,
@@ -281,6 +286,12 @@ class ConnectionManager:
             # Procesar con FSM
             try:
                 print(f"[DIAG] Llamando fsm.procesar_paquete()...")
+                # Log primer paquete de telemetría
+                if not slot.get("_primer_paquete_logged"):
+                    t0_unix = slot.get("t0_unix", time.time())
+                    elapsed_ms = (time.time() - t0_unix) * 1000
+                    print(f"[TELEMETRIA] Primer paquete: {elapsed_ms:.1f}ms")
+                    slot["_primer_paquete_logged"] = True
                 resultado = fsm.procesar_paquete(muestras)
                 print(f"[DIAG] FSM retornó: {resultado is not None}")
                 if resultado is not None:
