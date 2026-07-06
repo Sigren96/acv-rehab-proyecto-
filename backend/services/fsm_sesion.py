@@ -121,7 +121,9 @@ class ProcesadorIMU:
             # Timeout check
             if elapsed_ms > int(self.tmax_seg * 1000):
                 print(f"[DIAG FSM] TIMEOUT: elapsed_ms={elapsed_ms} > tmax={self.tmax_seg*1000}")
-                return self._cerrar_ronda("timeout")
+                # En NO-GO, agotar el tiempo sin moverse es un éxito clínico
+                resultado_timeout = "acierto" if self.tipo_estimulo == "NO-GO" else "timeout"
+                return self._cerrar_ronda(resultado_timeout)
 
             # Almacenar todas las muestras del paquete para cálculos finales (ángulo, temblor)
             for m in muestras:

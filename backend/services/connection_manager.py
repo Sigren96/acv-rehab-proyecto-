@@ -217,8 +217,12 @@ class ConnectionManager:
         # Timeout forzado
         elapsed_ms = (time.time() - t0_unix) * 1000
         print(f"[TIMEOUT] elapsed_ms={elapsed_ms:.1f}")
+        # Determinar resultado según el tipo de estímulo de la ronda actual
+        slot = self.sesiones_activas.get(sesion_id)
+        estimulo = slot.get("estimulo_actual") if slot else None
+        resultado_timeout = "acierto" if estimulo and estimulo.get("tipo") == "NO-GO" else "timeout"
         return {
-            "resultado":        "timeout",
+            "resultado":        resultado_timeout,
             "latencia_ms":      None,
             "angulo_final_deg": 0.0,
             "tasa_temblor":     0.0,
