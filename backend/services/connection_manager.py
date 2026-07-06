@@ -207,6 +207,12 @@ class ConnectionManager:
         margen_extra = 0.5  # segundos extra tras tmax para recibir el último paquete
         deadline = time.monotonic() + fsm.tmax_seg + margen_extra
 
+        # Limpiar bucket de resultado ANTES de entrar al bucle para evitar
+        # leer el resultado de la ronda anterior (efecto fantasma)
+        slot = self.sesiones_activas.get(sesion_id)
+        if slot:
+            slot["_ultimo_resultado"] = None
+
         while time.monotonic() < deadline:
             await asyncio.sleep(0.1)
             slot = self.sesiones_activas.get(sesion_id)
@@ -271,38 +277,6 @@ class ConnectionManager:
 
             fsm: SesionFSM = slot["fsm"]
             print(f"[DIAG] FSM encontrada, procesando {len(muestras)} muestras")
-
-            # FILTRO: Descartar muestras con timestamp anterior al inicio de la ronda actual (t0_unix)
-            # Esto evita el "efecto fantasma" de muestras residuales de la ronda anterior
-            t0_unix = slot.get("t0_unix")
-            if t0_unix is not None:
-                muestras_filtradas = []
-                for m in muestras:
-                    # Obtener timestamp de la muestra (puede venir en diferentes campos)
-                    ts = None
-                    if hasattr(m, 'timestamp_ms'):
-                        ts = getattr(m, 'timestamp_ms', None)
-                    elif isinstance(m, dict):
-                        ts = m.get('timestamp_ms') or m.get('t') or m.get('timestamp')
-                    
-                    if ts is not None:
-                        try:
-                            ts_float = float(ts)
-                            # timestamp_ms está en milisegundos, t0_unix en segundos
-                            # Convertir timestamp_ms a segundos para comparar
-                            ts_seg = ts_float / 1000.0 if ts_float > 1e10 else ts_float
-                            if ts_seg >= t0_unix:
-                                muestras_filtradas.append(m)
-                            else:
-                                print(f"[DIAG CM] Muestra descartada (timestamp anterior a t0_unix): ts={ts_seg}, t0_unix={t0_unix}")
-                        except (ValueError, TypeError):
-                            muestras_filtradas.append(m)  # Si no se puede parsear, mantener
-                    else:
-                        muestras_filtradas.append(m)  # Si no tiene timestamp, mantener
-                
-                if len(muestras_filtradas) != len(muestras):
-                    print(f"[DIAG CM] Filtrado: {len(muestras)} -> {len(muestras_filtradas)} muestras")
-                muestras = muestras_filtradas
 
             # Validar que muestras sea lista
             if not isinstance(muestras, list):
