@@ -165,24 +165,26 @@ class ProcesadorIMU:
             }
 
             # REGLA 2: Umbral Ultra Suave 0.2G para estímulos GO
+            # Usar aceleración dinámica (magnitud - 1G gravedad) para evitar falsos positivos en reposo
             if self.tipo_estimulo == "GO" and not self.movimiento_detectado:
-                mag = self._magnitud(ax, ay, az)
+                mag_total = self._magnitud(ax, ay, az)
+                aceleracion_dinamica = abs(mag_total - 1.0)
                 # Umbral muy accesible: 0.2G para máxima sensibilidad
-                print(f"[DIAG FSM] GO check: mag={mag:.4f}G, threshold=0.2G, movimiento_detectado={self.movimiento_detectado}")
-                if mag > 0.2:
-                    print(f"[DIAG FSM] ACIERTO GO: mag={mag:.4f}G > 0.2G, latencia={elapsed_ms}ms")
+                print(f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, threshold=0.2G, movimiento_detectado={self.movimiento_detectado}")
+                if aceleracion_dinamica > 0.2:
+                    print(f"[DIAG FSM] ACIERTO GO: accel_dinamica={aceleracion_dinamica:.4f}G > 0.2G, latencia={elapsed_ms}ms")
                     self.movimiento_detectado = True
                     self.latencia_ms = elapsed_ms
                     # Registrar acierto inmediato en historial
                     self.aciertos.append({
                         "tipo": "acierto",
                         "latencia_ms": elapsed_ms,
-                        "magnitud_g": round(mag, 3),
+                        "magnitud_g": round(aceleracion_dinamica, 3),
                         "direccion": self.direccion,
                     })
                     return self._cerrar_ronda("acierto", ws_data)
                 else:
-                    print(f"[DIAG FSM] NO-GO (magnitud insuficiente): mag={mag:.4f}G <= 0.2G")
+                    print(f"[DIAG FSM] NO-GO (aceleración dinámica insuficiente): accel_dinamica={aceleracion_dinamica:.4f}G <= 0.2G")
 
             # Para NO-GO: solo transmitir datos, no cerrar por movimiento
             # (la lógica de error NO-GO se maneja en el frontend o en nivel superior)
@@ -218,53 +220,50 @@ class ProcesadorIMU:
         """
         Calcula el ángulo final del movimiento en grados.
         
-        Para movimientos lineales (arriba/abajo/izquierda/derecha):
-        - Usa el acelerómetro de la última muestra para calcular el ángulo respecto a la gravedad
-        - Ángulo = atan2(eje_perpendicular, eje_movimiento) * 180/pi
-        
         Para rotación (círculo):
         - Integra la velocidad angular (giroscopio eje Z) sobre el tiempo
+        
+        Para movimientos lineales:
+        - Promedia las últimas 3 muestras para filtrar ruido
+        - Arriba/Abajo: Pitch = atan2(-ax, sqrt(ay² + az²))
+        - Izquierda/Derecha: Roll = atan2(ay, az)
+        Retorna grados redondeados a 2 decimales. Retorna 0.0 si hay error matemático.
         """
         if not self.muestras_ronda:
             return None
             
-        # Usar la última muestra para el cálculo del ángulo final
-        ultima = self.muestras_ronda[-1]
-        ax, ay, az = ultima["x"], ultima["y"], ultima["z"]
-        gx, gy, gz = ultima["gx"], ultima["gy"], ultima["gz"]
-        
-        if self.patron == "rotacion" or self.direccion == "circulo":
-            # Para rotación: integrar giroscopio eje Z sobre el tiempo
-            # Ángulo = suma(gz * dt) donde dt es el intervalo entre muestras
-            angulo = 0.0
-            for i in range(1, len(self.muestras_ronda)):
-                dt = (self.muestras_ronda[i]["timestamp_ms"] - self.muestras_ronda[i-1]["timestamp_ms"]) / 1000.0  # en segundos
-                angulo += self.muestras_ronda[i]["gz"] * dt
-            return abs(angulo)  # valor absoluto del ángulo rotado
-        else:
-            # Para movimientos lineales: calcular ángulo respecto a la gravedad usando acelerómetro
-            # Mapear dirección a ejes
-            eje_map = {
-                "arriba":    ("y", "x"),    # movimiento en Y, perpendicular en X
-                "abajo":     ("y", "x"),
-                "izquierda": ("x", "y"),    # movimiento en X, perpendicular en Y
-                "derecha":   ("x", "y"),
-            }
+        try:
+            if self.patron == "rotacion" or self.direccion == "circulo":
+                # Para rotación: integrar giroscopio eje Z sobre el tiempo
+                angulo = 0.0
+                for i in range(1, len(self.muestras_ronda)):
+                    dt = (self.muestras_ronda[i]["timestamp_ms"] - self.muestras_ronda[i-1]["timestamp_ms"]) / 1000.0
+                    angulo += self.muestras_ronda[i]["gz"] * dt
+                return round(abs(angulo), 2)
             
-            if self.direccion in eje_map:
-                eje_mov, eje_perp = eje_map[self.direccion]
-                val_mov = ultima[eje_mov]
-                val_perp = ultima[eje_perp]
-                # Ángulo = atan2(perpendicular, movimiento) en grados
-                angulo_rad = math.atan2(val_perp, val_mov)
-                return math.degrees(angulo_rad)
+            # Para movimientos lineales: promediar últimas 3 muestras para filtrar ruido
+            ultimas = self.muestras_ronda[-3:] if len(self.muestras_ronda) >= 3 else self.muestras_ronda
+            n = len(ultimas)
+            ax_prom = sum(m["x"] for m in ultimas) / n
+            ay_prom = sum(m["y"] for m in ultimas) / n
+            az_prom = sum(m["z"] for m in ultimas) / n
             
-            # Fallback: ángulo genérico respecto a la vertical (eje Z)
-            # Ángulo de inclinación = acos(az / magnitud) * 180/pi
-            mag = math.sqrt(ax*ax + ay*ay + az*az)
+            if self.direccion in ("arriba", "abajo"):
+                # Pitch (inclinación frontal): atan2(-ax, sqrt(ay² + az²))
+                pitch_rad = math.atan2(-ax_prom, math.sqrt(ay_prom**2 + az_prom**2))
+                return round(math.degrees(pitch_rad), 2)
+            elif self.direccion in ("izquierda", "derecha"):
+                # Roll (inclinación lateral): atan2(ay, az)
+                roll_rad = math.atan2(ay_prom, az_prom)
+                return round(math.degrees(roll_rad), 2)
+            
+            # Fallback: ángulo genérico respecto a la vertical
+            mag = math.sqrt(ax_prom**2 + ay_prom**2 + az_prom**2)
             if mag > 0:
-                return math.degrees(math.acos(max(-1, min(1, az / mag))))
-            return None
+                return round(math.degrees(math.acos(max(-1, min(1, az_prom / mag)))), 2)
+            return 0.0
+        except (ValueError, ZeroDivisionError, AttributeError):
+            return 0.0
 
     def _calcular_tasa_temblor(self) -> Optional[float]:
         """
