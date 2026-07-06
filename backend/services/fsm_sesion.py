@@ -183,13 +183,9 @@ class ProcesadorIMU:
                 mag_total = self._magnitud(ax, ay, az)
                 aceleracion_dinamica = abs(mag_total - 1.0)
                 
-                # Calcular magnitud del giroscopio en grados/segundo
-                gyro_magnitud = math.sqrt(gx*gx + gy*gy + gz*gz)
-                
-                # Detección híbrida: aceleración dinámica >= 0.2G O giroscopio >= 25°/s
-                print(f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, gyro={gyro_magnitud:.1f}°/s, threshold_accel=0.2G, threshold_gyro=25°/s, movimiento_detectado={self.movimiento_detectado}")
-                if aceleracion_dinamica >= 0.2 or gyro_magnitud >= 25.0:
-                    print(f"[DIAG FSM] ACIERTO GO: accel_dinamica={aceleracion_dinamica:.4f}G, gyro={gyro_magnitud:.1f}°/s, latencia={elapsed_ms}ms")
+                print(f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, threshold=0.2G, movimiento_detectado={self.movimiento_detectado}")
+                if aceleracion_dinamica >= 0.2:
+                    print(f"[DIAG FSM] ACIERTO GO: accel_dinamica={aceleracion_dinamica:.4f}G, latencia={elapsed_ms}ms")
                     self.movimiento_detectado = True
                     self.latencia_ms = elapsed_ms
                     # Registrar acierto inmediato en historial
@@ -197,15 +193,19 @@ class ProcesadorIMU:
                         "tipo": "acierto",
                         "latencia_ms": elapsed_ms,
                         "magnitud_g": round(aceleracion_dinamica, 3),
-                        "gyro_deg_s": round(gyro_magnitud, 1),
                         "direccion": self.direccion,
                     })
                     return self._cerrar_ronda("acierto", ws_data)
                 else:
                     print(f"[DIAG FSM] NO-GO (aceleración dinámica insuficiente): accel_dinamica={aceleracion_dinamica:.4f}G, gyro={gyro_magnitud:.1f}°/s")
 
-            # Para NO-GO: solo transmitir datos, no cerrar por movimiento
-            # (la lógica de error NO-GO se maneja en el frontend o en nivel superior)
+            # Para NO-GO: detectar movimiento indebido → error
+            if self.tipo_estimulo == "NO-GO":
+                mag_total = self._magnitud(ax, ay, az)
+                aceleracion_dinamica = abs(mag_total - 1.0)
+                if aceleracion_dinamica >= self.umbral_g:
+                    print(f"[DIAG FSM] ERROR NO-GO: movimiento={aceleracion_dinamica:.4f}G")
+                    return self._cerrar_ronda("error", ws_data)
 
             # Retornar datos WebSocket para gráficas en tiempo real
             print(f"[DIAG FSM] Retornando ws_data para gráfico: x={ax:.4f}, y={ay:.4f}, z={az:.4f}")

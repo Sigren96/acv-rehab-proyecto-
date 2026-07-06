@@ -218,9 +218,12 @@ class ConnectionManager:
         while True:
             await asyncio.sleep(0.05)  # 50ms polling
             
-            # Verificar si el FSM ya tiene resultado
-            if fsm.resultado_ronda is not None:
-                return fsm.resultado_ronda
+            # Verificar si llegó resultado vía telemetría
+            slot = self.sesiones_activas.get(sesion_id)
+            if slot and slot.get("_ultimo_resultado") is not None:
+                resultado = slot["_ultimo_resultado"]
+                slot["_ultimo_resultado"] = None
+                return resultado
             
             # Timeout con gracia de red
             elapsed_ms = int((time.monotonic() - inicio) * 1000)
