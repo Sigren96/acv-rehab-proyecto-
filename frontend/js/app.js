@@ -274,6 +274,13 @@ document.addEventListener("DOMContentLoaded", () => {
       .on("telemetria", (payload) => {
         actualizarEstadoDispositivo("recibiendo");
         actualizarChartXYZ(payload.muestras);
+        // Calcular aceleración dinámica de la última muestra y actualizar gauge
+        if (payload.muestras && payload.muestras.length > 0) {
+          const ultima = payload.muestras[payload.muestras.length - 1];
+          const mag = Math.sqrt(ultima.ax * ultima.ax + ultima.ay * ultima.ay + ultima.az * ultima.az);
+          const dinamica = Math.abs(mag - 1.0);
+          actualizarGauge(dinamica);
+        }
       })
 
       .on("estimulo", (payload) => {
@@ -289,6 +296,10 @@ document.addEventListener("DOMContentLoaded", () => {
       .on("resultado_ronda", (payload) => {
         agregarFilaRonda(payload);
         actualizarContadores(payload);
+        // Actualizar tarjetas visuales Fila 4
+        if (payload.angulo_deg != null) actualizarAngulo(payload.angulo_deg);
+        if (payload.temblor != null) actualizarTemblor(payload.temblor);
+        if (payload.latencia_ms != null) actualizarLatencia(payload.latencia_ms);
         document.getElementById("monitor-estimulo-actual").innerHTML =
           `<span class="badge badge-pending">Descanso...</span>`;
       })
@@ -410,6 +421,51 @@ document.addEventListener("DOMContentLoaded", () => {
     chartXYZ.update();
   }
 
+  /**
+   * Actualiza la tarjeta de Latencia (Fila 4, tarjeta azul)
+   * @param {number|null} valorMs - Valor en milisegundos
+   */
+  window.actualizarLatencia = function (valorMs) {
+    const valorEl = document.getElementById("monitor-latencia-final");
+    if (!valorEl) return;
+
+    if (valorMs == null || isNaN(valorMs)) {
+      valorEl.textContent = "—";
+    } else {
+      valorEl.textContent = Math.round(valorMs) + " ms";
+    }
+
+    // Actualizar barra de progreso y badge
+    const card = valorEl.closest(".stat-card");
+    if (card) {
+      const barFill = card.querySelector(".stat-bar-fill");
+      if (barFill) {
+        // Máx 2000ms = 100%
+        const pct = Math.min(100, (valorMs / 2000) * 100);
+        barFill.style.width = pct + "%";
+      }
+
+      const badge = card.querySelector(".stat-badge");
+      if (badge && valorMs != null && !isNaN(valorMs)) {
+        let texto = "";
+        if (valorMs < 500) {
+          texto = "Excelente";
+          badge.className = "stat-badge verde";
+        } else if (valorMs < 1000) {
+          texto = "Aceptable";
+          badge.className = "stat-badge amarillo";
+        } else {
+          texto = "Lento";
+          badge.className = "stat-badge rojo";
+        }
+        badge.textContent = texto;
+      } else if (badge) {
+        badge.textContent = "—";
+        badge.className = "stat-badge";
+      }
+    }
+  };
+
   // ── Tabla de rondas ────────────────────────────────────────────────────
   let contAciertos = 0, contErrores = 0;
 
@@ -496,6 +552,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Resetear estado del dispositivo
     actualizarEstadoDispositivo("esperando");
+
+    // Resetear tarjetas visuales Fila
+    actualizarGauge(0);
+    actualizarLatencia(null);
+    actualizarAngulo(null);
+    actualizarTemblor(null);
   }
 
   // ════════════════════════════════════════════════════════════
@@ -684,9 +746,15 @@ document.addEventListener("DOMContentLoaded", () => {
    * @param {number} valorGrados - Valor en grados (0 a 180)
    */
   window.actualizarAngulo = function (valorGrados) {
-    const clamped = Math.max(0, Math.min(180, valorGrados));
     const valorEl = document.getElementById("monitor-angulo-final");
-    if (valorEl) valorEl.textContent = Math.round(clamped) + "°";
+    if (!valorEl) return;
+
+    if (valorGrados == null || isNaN(valorGrados)) {
+      valorEl.textContent = "—";
+    } else {
+      const clamped = Math.max(0, Math.min(180, valorGrados));
+      valorEl.textContent = Math.round(clamped) + "°";
+    }
 
     // Actualizar barra de progreso
     const card = valorEl?.closest(".stat-card");
@@ -721,9 +789,15 @@ document.addEventListener("DOMContentLoaded", () => {
    * @param {number} valorHz - Valor en Hz
    */
   window.actualizarTemblor = function (valorHz) {
-    const clamped = Math.max(0, valorHz);
     const valorEl = document.getElementById("monitor-tasa-temblor");
-    if (valorEl) valorEl.textContent = clamped.toFixed(1) + " Hz";
+    if (!valorEl) return;
+
+    if (valorHz == null || isNaN(valorHz)) {
+      valorEl.textContent = "—";
+    } else {
+      const clamped = Math.max(0, valorHz);
+      valorEl.textContent = clamped.toFixed(1) + " Hz";
+    }
 
     // Actualizar barra de progreso (máx 6 Hz = 100%)
     const card = valorEl?.closest(".stat-card");
