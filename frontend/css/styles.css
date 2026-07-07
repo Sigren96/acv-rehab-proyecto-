@@ -241,6 +241,47 @@ input, select, textarea { font-family: inherit; }
   margin-bottom: 24px;
 }
 
+/* ── Monitor Grid 4-column layout (Stage 1) ──────────────────── */
+.monitor-grid-4col {
+  display: grid;
+  grid-template-columns: 25% 30% 30% 15%;
+  gap: 16px;
+  align-items: start;
+}
+
+.monitor-bar {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.monitor-card-vacia {
+  /* placeholder para alinear grid */
+}
+
+.monitor-valor-grande .stat-value {
+  font-size: 2rem;
+}
+
+/* Responsive para monitor-grid-4col */
+@media (max-width: 1024px) {
+  .monitor-grid-4col {
+    grid-template-columns: 1fr;
+  }
+  .monitor-grid-4col > * {
+    grid-column: auto !important;
+  }
+  .monitor-bar {
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+  }
+  .monitor-card-vacia {
+    display: none;
+  }
+}
+
 .stat-card {
   background: var(--blanco);
   border: 1px solid var(--gris-borde);
@@ -681,6 +722,13 @@ tr:hover td { background: var(--azul-suave); }
   text-transform: uppercase;
   letter-spacing: .05em;
   margin-bottom: 12px;
+}
+
+/* Columna de gráficos apilados verticalmente */
+.charts-column {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 /* Panel de rondas */

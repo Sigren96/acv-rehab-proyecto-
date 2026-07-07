@@ -169,9 +169,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Volver a pantalla de espera entre rondas tras 1.5s
     setTimeout(() => {
-      mostrarPantalla("espera");
-      pantallaEstimulo.className = "estimulo-screen espera";
-      document.getElementById("espera-msg-secundario").textContent = "Preparándose para la siguiente ronda...";
+      // Solo volver a espera si la sesión NO ha terminado
+      const finVisible = pantallaFin && !pantallaFin.classList.contains("hidden");
+      if (!finVisible) {
+        mostrarPantalla("espera");
+        pantallaEstimulo.className = "estimulo-screen espera";
+        document.getElementById("espera-msg-secundario").textContent = "Preparándose para la siguiente ronda...";
+      }
     }, 1800);
   }
 

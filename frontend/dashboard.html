@@ -230,7 +230,7 @@
           </div>
         </div>
 
-        <!-- Stats rápidas -->
+        <!-- Fila 1: Stats rápidas -->
         <div class="stats-grid mb-4">
           <div class="stat-card azul">
             <div class="stat-label">Ronda actual</div>
@@ -250,23 +250,34 @@
           </div>
         </div>
 
-        <!-- Estímulo actual -->
-        <div class="card mb-4 flex items-center gap-3">
-          <span style="font-size:.82rem;font-weight:600;color:var(--gris-texto);">Estímulo activo:</span>
-          <span id="monitor-estimulo-actual"><span class="badge badge-pending">Esperando inicio...</span></span>
-          <span style="margin-left:auto;font-size:.78rem;color:var(--gris-texto);">Dificultad: <strong id="monitor-dificultad">—</strong></span>
+        <!-- Fila 2: Barra completa -->
+        <div class="monitor-bar mb-4">
+          <div class="monitor-bar-left">
+            <span style="font-size:.82rem;font-weight:600;color:var(--gris-texto);">Estímulo activo:</span>
+            <span id="monitor-estimulo-actual"><span class="badge badge-pending">Esperando inicio...</span></span>
+          </div>
+          <div class="monitor-bar-center">
+            <span style="font-size:.78rem;color:var(--gris-texto);">Dificultad: <strong id="monitor-dificultad">—</strong></span>
+          </div>
+          <div class="monitor-bar-right">
+            <span id="monitor-estado-sesion" class="badge badge-pending">Sin sesión</span>
+          </div>
         </div>
 
-        <div class="monitor-grid">
-          <!-- Gráfico XYZ vivo -->
-          <div>
-            <div class="chart-container">
-              <div class="chart-label">Aceleración XYZ en vivo (G)</div>
-              <canvas id="chart-xyz"></canvas>
-            </div>
+        <!-- Fila 3: Cuatro columnas (25% / 30% / 30% / 15%) -->
+        <div class="monitor-grid-4col mb-4">
+          <div class="card monitor-card-vacia">
+            <div class="chart-label">Aceleración Actual (G)</div>
+            <div id="monitor-aceleracion-actual" class="monitor-valor-grande">—</div>
           </div>
-
-          <!-- Panel de rondas -->
+          <div class="chart-container">
+            <div class="chart-label">Aceleración XYZ en vivo (G)</div>
+            <canvas id="chart-xyz"></canvas>
+          </div>
+          <div class="chart-container">
+            <div class="chart-label">Giroscopio GX/GY/GZ en vivo (°/s)</div>
+            <canvas id="chart-giro"></canvas>
+          </div>
           <div class="card" style="padding:0;overflow:hidden;">
             <div style="padding:16px;border-bottom:1px solid var(--gris-borde);">
               <span class="card-title">Historial de Rondas</span>
@@ -275,13 +286,7 @@
               <table>
                 <thead>
                   <tr>
-                    <th>#</th>
-                    <th>Tipo</th>
-                    <th>Dir.</th>
-                    <th>Resultado</th>
-                    <th>Latencia</th>
-                    <th>Ángulo</th>
-                    <th>Temblor</th>
+                    <th>#</th><th>Tipo</th><th>Dir.</th><th>Resultado</th><th>Latencia</th><th>Ángulo</th><th>Temblor</th>
                   </tr>
                 </thead>
                 <tbody id="tabla-rondas"></tbody>
@@ -290,7 +295,26 @@
           </div>
         </div>
 
-        <!-- Resumen final (se muestra al terminar) -->
+        <!-- Fila 4: Tres tarjetas vacías -->
+        <div class="stats-grid mb-4">
+          <div class="stat-card azul">
+            <div class="stat-label">Latencia</div>
+            <div class="stat-value" id="monitor-latencia-final">—</div>
+            <div class="stat-unit">ms</div>
+          </div>
+          <div class="stat-card verde">
+            <div class="stat-label">Ángulo Final</div>
+            <div class="stat-value" id="monitor-angulo-final">—</div>
+            <div class="stat-unit">°</div>
+          </div>
+          <div class="stat-card amarillo">
+            <div class="stat-label">Tasa de Temblor</div>
+            <div class="stat-value" id="monitor-tasa-temblor">—</div>
+            <div class="stat-unit">%</div>
+          </div>
+        </div>
+
+        <!-- Resumen final (ancho completo, fuera del grid) -->
         <div id="resumen-final" class="hidden"></div>
       </section>
 
