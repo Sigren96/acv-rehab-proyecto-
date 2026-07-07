@@ -751,10 +751,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const valorEl = document.getElementById("monitor-angulo-final");
     if (!valorEl) return;
 
+    let clamped = null;
     if (valorGrados == null || isNaN(valorGrados)) {
       valorEl.textContent = "—";
     } else {
-      const clamped = Math.max(0, Math.min(180, valorGrados));
+      clamped = Math.max(0, Math.min(180, valorGrados));
       valorEl.textContent = Math.round(clamped) + "°";
     }
 
@@ -763,25 +764,34 @@ document.addEventListener("DOMContentLoaded", () => {
     if (card) {
       const barFill = card.querySelector(".stat-bar-fill");
       if (barFill) {
-        const pct = (clamped / 180) * 100;
-        barFill.style.width = pct + "%";
+        if (clamped != null) {
+          const pct = (clamped / 180) * 100;
+          barFill.style.width = pct + "%";
+        } else {
+          barFill.style.width = "0%";
+        }
       }
 
       // Actualizar badge según rango
       const badge = card.querySelector(".stat-badge");
       if (badge) {
-        let texto = "";
-        if (clamped <= 30 || clamped >= 150) {
-          texto = "Fuera de Rango";
-          badge.className = "stat-badge rojo";
-        } else if (clamped <= 60 || clamped >= 120) {
-          texto = "Precaución";
-          badge.className = "stat-badge amarillo";
+        if (clamped == null) {
+          badge.textContent = "";
+          badge.className = "stat-badge";
         } else {
-          texto = "Rango Óptimo";
-          badge.className = "stat-badge verde";
+          let texto = "";
+          if (clamped <= 30 || clamped >= oling 150) {
+            texto = "Fuera de Rango";
+            badge.className = "stat-badge rojo";
+          } else if (clamped <= 60 || clamped >= 120) {
+            texto = "Precaución";
+            badge.className = "stat-badge amarillo";
+          } else {
+            texto = "Rango Óptimo";
+            badge.className = "stat-badge verde";
+          }
+          badge.textContent = texto;
         }
-        badge.textContent = texto;
       }
     }
   };
@@ -794,10 +804,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const valorEl = document.getElementById("monitor-tasa-temblor");
     if (!valorEl) return;
 
+    let clamped = null;
     if (valorHz == null || isNaN(valorHz)) {
       valorEl.textContent = "—";
     } else {
-      const clamped = Math.max(0, valorHz);
+      clamped = Math.max(0, valorHz);
       valorEl.textContent = clamped.toFixed(1) + " Hz";
     }
 
@@ -806,25 +817,34 @@ document.addEventListener("DOMContentLoaded", () => {
     if (card) {
       const barFill = card.querySelector(".stat-bar-fill");
       if (barFill) {
-        const pct = Math.min(100, (clamped / 6) * 100);
-        barFill.style.width = pct + "%";
+        if (clamped != null) {
+          const pct = Math.min(100, (clamped / 6) * 100);
+          barFill.style.width = pct + "%";
+        } else {
+          barFill.style.width = "0%";
+        }
       }
 
       // Actualizar badge según rango
       const badge = card.querySelector(".stat-badge");
       if (badge) {
-        let texto = "";
-        if (clamped < 2) {
-          texto = "Leve";
-          badge.className = "stat-badge verde";
-        } else if (clamped < 4) {
-          texto = "Moderado";
-          badge.className = "stat-badge amarillo";
+        if (clamped == null) {
+          badge.textContent = "";
+          badge.className = "stat-badge";
         } else {
-          texto = "Severo";
-          badge.className = "stat-badge rojo";
+          let texto = "";
+          if (clamped < 2) {
+            texto = "Leve";
+            badge.className = "stat-badge verde";
+          } else if (clamped < 4) {
+            texto = "Moderado";
+            badge.className = "stat-badge amarillo";
+          } else {
+            texto = "Severo";
+            badge.className = "stat-badge rojo";
+          }
+          badge.textContent = texto;
         }
-        badge.textContent = texto;
       }
     }
   };
