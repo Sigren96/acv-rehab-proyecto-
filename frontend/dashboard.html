@@ -339,22 +339,64 @@
           </div>
         </div>
 
-        <!-- Fila 4: Tres tarjetas vacías -->
+        <!-- Fila 4: Tres tarjetas con estructura unificada (icono + valor + badge + barra + escalas) -->
         <div class="stats-grid mb-4">
+          <!-- Tarjeta 1: Latencia (azul) -->
           <div class="stat-card azul">
-            <div class="stat-label">Latencia</div>
+            <div class="stat-header">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2v20M17 7H7"/>
+              </svg>
+              <div class="stat-label">Latencia</div>
+            </div>
             <div class="stat-value" id="monitor-latencia-final">—</div>
             <div class="stat-unit">ms</div>
+            <div class="stat-badge">Rango Óptimo</div>
+            <div class="stat-bar-container">
+              <div class="stat-bar-fill azul" style="width: 0%;"></div>
+            </div>
+            <div class="stat-scale-marks">
+              <span>0 ms</span><span>500 ms</span><span>1000 ms</span><span>1500+ ms</span>
+            </div>
           </div>
+
+          <!-- Tarjeta 2: Ángulo Final (verde→amarillo→rojo) -->
           <div class="stat-card verde">
-            <div class="stat-label">Ángulo Final</div>
+            <div class="stat-header">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5"/>
+              </svg>
+              <div class="stat-label">Ángulo Final</div>
+            </div>
             <div class="stat-value" id="monitor-angulo-final">—</div>
             <div class="stat-unit">°</div>
+            <div class="stat-badge">Rango Óptimo</div>
+            <div class="stat-bar-container">
+              <div class="stat-bar-fill verde" style="width: 0%;"></div>
+            </div>
+            <div class="stat-scale-marks">
+              <span>0°</span><span>45°</span><span>90°</span><span>180°</span>
+            </div>
           </div>
-          <div class="stat-card amarillo">
-            <div class="stat-label">Tasa de Temblor</div>
+
+          <!-- Tarjeta 3: Tasa de Temblor (rojo) -->
+          <div class="stat-card rojo">
+            <div class="stat-header">
+              <svg class="stat-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M4 14a1 1 0 0 1-.78-1.63l9.9-10.27a1 1 0 0 1 1.56 0l9.9 10.27A1 1 0 0 1 20 14H4z"/>
+                <path d="M12 14v8M8 14v8M16 14v8"/>
+              </svg>
+              <div class="stat-label">Tasa de Temblor</div>
+            </div>
             <div class="stat-value" id="monitor-tasa-temblor">—</div>
-            <div class="stat-unit">%</div>
+            <div class="stat-unit">Hz</div>
+            <div class="stat-badge">Leve</div>
+            <div class="stat-bar-container">
+              <div class="stat-bar-fill rojo" style="width: 0%;"></div>
+            </div>
+            <div class="stat-scale-marks">
+              <span>0 Hz</span><span>2 Hz</span><span>4 Hz</span><span>6+ Hz</span>
+            </div>
           </div>
         </div>
 
