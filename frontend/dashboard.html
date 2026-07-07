@@ -266,9 +266,53 @@
 
         <!-- Fila 3: Cuatro columnas (25% / 30% / 30% / 15%) -->
         <div class="monitor-grid-4col mb-4">
-          <div class="card monitor-card-vacia">
+          <div class="card gauge-card" id="monitor-aceleracion-actual">
             <div class="chart-label">Aceleración Actual (G)</div>
-            <div id="monitor-aceleracion-actual" class="monitor-valor-grande">—</div>
+            <div class="gauge-container">
+              <svg class="gauge-svg" viewBox="0 0 200 130" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Gauge de aceleración actual">
+                <!-- Fondo del arco (track) -->
+                <path class="gauge-track" d="M 45 60 A 55 55 0 0 1 155 60" />
+                <!-- Arco con degradado: verde (0) → amarillo → rojo (0.60+) -->
+                <defs>
+                  <linearGradient id="gauge-gradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stop-color="var(--verde-exito)" />
+                    <stop offset="50%" stop-color="var(--amarillo-alerta)" />
+                    <stop offset="100%" stop-color="var(--rojo-error)" />
+                  </linearGradient>
+                </defs>
+                <path class="gauge-arc" d="M 45 60 A 55 55 0 0 1 155 60" />
+                <!-- Marcas de escala (ticks) - radiales desde radio 50 a 55 -->
+                <g class="gauge-ticks" stroke="var(--gris-texto)" stroke-width="2" stroke-linecap="round">
+                  <!-- 0.00 G - ángulo 180° (izquierda) -->
+                  <line x1="50" y1="60" x2="45" y2="60" />
+                  <!-- 0.15 G - ángulo 135° -->
+                  <line x1="62.5" y1="97.5" x2="57.5" y2="92.5" />
+                  <!-- 0.30 G - ángulo 90° (abajo) -->
+                  <line x1="100" y1="110" x2="100" y2="105" />
+                  <!-- 0.45 G - ángulo 45° -->
+                  <line x1="137.5" y1="97.5" x2="142.5" y2="92.5" />
+                  <!-- 0.60+ G - ángulo 0° (derecha) -->
+                  <line x1="150" y1="60" x2="155" y2="60" />
+                </g>
+                <!-- Etiquetas de escala (radio ~65) -->
+                <g class="gauge-labels" font-size="10" fill="var(--gris-texto)" font-family="var(--font-sans)" text-anchor="middle" dominant-baseline="middle">
+                  <text x="35"  y="60">0</text>
+                  <text x="54"  y="106">0.15</text>
+                  <text x="100" y="125">0.30</text>
+                  <text x="146" y="106">0.45</text>
+                  <text x="165" y="60">0.60+</text>
+                </g>
+                <!-- Aguja: en 0 G apunta a la izquierda (ángulo 180°) -->
+                <line class="gauge-needle" x1="100" y1="60" x2="48" y2="60"
+                      stroke="var(--negro)" stroke-width="3" stroke-linecap="round" />
+                <!-- Centro de la aguja -->
+                <circle class="gauge-center" cx="100" cy="60" r="6" fill="var(--negro)" />
+              </svg>
+              <div class="gauge-value-row">
+                <span id="monitor-aceleracion-valor" class="gauge-value">0.0 G</span>
+              </div>
+              <div class="gauge-threshold">Umbral: 0.15 G</div>
+            </div>
           </div>
           <div class="chart-container">
             <div class="chart-label">Aceleración XYZ en vivo (G)</div>

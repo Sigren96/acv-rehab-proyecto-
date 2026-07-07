@@ -263,6 +263,85 @@ input, select, textarea { font-family: inherit; }
   font-size: 2rem;
 }
 
+/* ── Gauge semicircular (Aceleración Actual) ─────────────────── */
+.gauge-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 280px;
+  padding: 16px;
+}
+
+.gauge-container {
+  width: 100%;
+  max-width: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.gauge-svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.gauge-track {
+  fill: none;
+  stroke: var(--gris-borde);
+  stroke-width: 10;
+  stroke-linecap: round;
+}
+
+.gauge-arc {
+  fill: none;
+  stroke: url(#gauge-gradient);
+  stroke-width: 10;
+  stroke-linecap: round;
+  stroke-dasharray: 172.79;  /* π * 55 = semicircunferencia */
+  stroke-dashoffset: 0;
+  transition: stroke-dashoffset var(--trans-med);
+}
+
+.gauge-ticks line {
+  stroke-linecap: round;
+}
+
+.gauge-needle {
+  transform-origin: 100px 60px;
+  transform: rotate(0deg);  /* 0° = apuntando a la izquierda (0 G) */
+  transition: transform var(--trans-med);
+}
+
+.gauge-value-row {
+  margin-top: 4px;
+}
+
+.gauge-value {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: var(--negro);
+  font-family: var(--font-mono);
+}
+
+.gauge-threshold {
+  font-size: 0.7rem;
+  color: var(--gris-texto);
+  font-weight: 500;
+}
+
+/* Responsive para gauge */
+@media (max-width: 1024px) {
+  .gauge-card {
+    min-height: 220px;
+  }
+  .gauge-container {
+    max-width: 180px;
+  }
+}
+
 /* Responsive para monitor-grid-4col */
 @media (max-width: 1024px) {
   .monitor-grid-4col {
