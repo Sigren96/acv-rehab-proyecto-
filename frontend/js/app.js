@@ -656,4 +656,100 @@ document.addEventListener("DOMContentLoaded", () => {
     window.ENV_API_BASE = url;
     showToast("Configuración guardada en esta sesión.", "success");
   });
+
+  // ════════════════════════════════════════════════════════════
+  // FUNCIONES DE ACTUALIZACIÓN VISUAL (para prueba manual desde consola)
+  // ════════════════════════════════════════════════════════════
+
+  /**
+   * Actualiza el gauge de aceleración (Fila 3, Col 1)
+   * @param {number} valorG - Valor en G (0 a 0.60+)
+   */
+  window.actualizarGauge = function (valorG) {
+    const clamped = Math.max(0, Math.min(0.60, valorG));
+    const valorEl = document.getElementById("monitor-aceleracion-valor");
+    if (valorEl) valorEl.textContent = clamped.toFixed(1) + " G";
+
+    const needle = document.querySelector(".gauge-needle");
+    if (needle) {
+      // 0 G = 0° (izquierda), 0.60 G = 180° (derecha)
+      const rotation = (clamped / 0.60) * 180;
+      needle.style.transform = `rotate(${rotation}deg)`;
+      needle.style.transformOrigin = "center 100%";
+    }
+  };
+
+  /**
+   * Actualiza la tarjeta de Ángulo Final (Fila 4, tarjeta verde)
+   * @param {number} valorGrados - Valor en grados (0 a 180)
+   */
+  window.actualizarAngulo = function (valorGrados) {
+    const clamped = Math.max(0, Math.min(180, valorGrados));
+    const valorEl = document.getElementById("monitor-angulo-final");
+    if (valorEl) valorEl.textContent = Math.round(clamped) + "°";
+
+    // Actualizar barra de progreso
+    const card = valorEl?.closest(".stat-card");
+    if (card) {
+      const barFill = card.querySelector(".stat-bar-fill");
+      if (barFill) {
+        const pct = (clamped / 180) * 100;
+        barFill.style.width = pct + "%";
+      }
+
+      // Actualizar badge según rango
+      const badge = card.querySelector(".stat-badge");
+      if (badge) {
+        let texto = "";
+        if (clamped <= 30 || clamped >= 150) {
+          texto = "Fuera de Rango";
+          badge.className = "stat-badge rojo";
+        } else if (clamped <= 60 || clamped >= 120) {
+          texto = "Precaución";
+          badge.className = "stat-badge amarillo";
+        } else {
+          texto = "Rango Óptimo";
+          badge.className = "stat-badge verde";
+        }
+        badge.textContent = texto;
+      }
+    }
+  };
+
+  /**
+   * Actualiza la tarjeta de Tasa de Temblor (Fila 4, tarjeta roja)
+   * @param {number} valorHz - Valor en Hz
+   */
+  window.actualizarTemblor = function (valorHz) {
+    const clamped = Math.max(0, valorHz);
+    const valorEl = document.getElementById("monitor-tasa-temblor");
+    if (valorEl) valorEl.textContent = clamped.toFixed(1) + " Hz";
+
+    // Actualizar barra de progreso (máx 6 Hz = 100%)
+    const card = valorEl?.closest(".stat-card");
+    if (card) {
+      const barFill = card.querySelector(".stat-bar-fill");
+      if (barFill) {
+        const pct = Math.min(100, (clamped / 6) * 100);
+        barFill.style.width = pct + "%";
+      }
+
+      // Actualizar badge según rango
+      const badge = card.querySelector(".stat-badge");
+      if (badge) {
+        let texto = "";
+        if (clamped < 2) {
+          texto = "Leve";
+          badge.className = "stat-badge verde";
+        } else if (clamped < 4) {
+          texto = "Moderado";
+          badge.className = "stat-badge amarillo";
+        } else {
+          texto = "Severo";
+          badge.className = "stat-badge rojo";
+        }
+        badge.textContent = texto;
+      }
+    }
+  };
 });
