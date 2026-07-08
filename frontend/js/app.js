@@ -29,6 +29,11 @@ document.addEventListener("DOMContentLoaded", () => {
   let chartXYZ        = null;
   let chartHistorial  = null;
   let bufferXYZ       = { x: [], y: [], z: [], labels: [] };
+
+  // Estado gráfico Giro (giroscopio)
+  let chartGiro       = null;
+  let bufferGiro      = { x: [], y: [], z: [], labels: [] };
+
   const MAX_PUNTOS    = 60; // últimos 60 paquetes en el gráfico vivo
 
   // ── Inicialización ─────────────────────────────────────────────────────
@@ -68,7 +73,10 @@ document.addEventListener("DOMContentLoaded", () => {
     if (nombre === "sesiones")       cargarFormSesion();
     if (nombre === "configuraciones") cargarConfiguraciones();
     if (nombre === "historial")      cargarSelectorHistorial();
-    if (nombre === "monitoreo")      inicializarChartXYZ();
+    if (nombre === "monitoreo") {
+      inicializarChartXYZ();
+      inicializarChartGiro();
+    }
   }
 
   // ── Sidebar móvil ──────────────────────────────────────────────────────
@@ -249,6 +257,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   function iniciarMonitoreo(sesion, pacienteNombre) {
     inicializarChartXYZ();
+    inicializarChartGiro();
     actualizarEstadoDispositivo("esperando");
 
     // Mostrar nombre del paciente en el header del monitoreo
@@ -275,6 +284,7 @@ document.addEventListener("DOMContentLoaded", () => {
       .on("telemetria", (payload) => {
         actualizarEstadoDispositivo("recibiendo");
         actualizarChartXYZ(payload.muestras);
+        actualizarChartGiro(payload.muestras);
         // Calcular aceleración dinámica de la última muestra y actualizar gauge
         if (payload.muestras && payload.muestras.length > 0) {
           const ultima = payload.muestras[payload.muestras.length - 1];
@@ -424,6 +434,61 @@ document.addEventListener("DOMContentLoaded", () => {
     chartXYZ.update();
   }
 
+  // ── Chart.js — Gráfico Giroscopio en vivo ────────────────────────────
+  function inicializarChartGiro() {
+    const canvas = document.getElementById("chart-giro");
+    if (!canvas) return;
+    if (chartGiro) { chartGiro.destroy(); chartGiro = null; }
+    bufferGiro = { x: [], y: [], z: [], labels: [] };
+
+    chartGiro = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          { label: "Eje GX (°/s)", data: [], borderColor: "#EF4444", backgroundColor: "rgba(239,68,68,.08)", borderWidth: 2, tension: 0.3, pointRadius: 0 },
+          { label: "Eje GY (°/s)", data: [], borderColor: "#8B5CF6", backgroundColor: "rgba(139,92,246,.08)", borderWidth: 2, tension: 0.3, pointRadius: 0 },
+          { label: "Eje GZ (°/s)", data: [], borderColor: "#06B6D4", backgroundColor: "rgba(6,182,212,.08)",  borderWidth: 2, tension: 0.3, pointRadius: 0 },
+        ],
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: false,
+        plugins: { legend: { position: "top", labels: { font: { size: 11 }, boxWidth: 12 } } },
+        scales: {
+          x: { display: false },
+          y: {
+            min: -500, max: 500,
+            grid: { color: "rgba(0,0,0,.05)" },
+            ticks: { font: { size: 10 }, callback: v => v.toFixed(0) + " °/s" },
+          },
+        },
+      },
+    });
+  }
+
+  function actualizarChartGiro(muestras) {
+    if (!chartGiro || !muestras) return;
+    muestras.forEach((m, i) => {
+      bufferGiro.x.push(m.gx);
+      bufferGiro.y.push(m.gy);
+      bufferGiro.z.push(m.gz);
+      bufferGiro.labels.push("");
+    });
+
+    // Mantener solo los últimos MAX_PUNTOS
+    ["x","y","z","labels"].forEach(k => {
+      if (bufferGiro[k].length > MAX_PUNTOS) bufferGiro[k] = bufferGiro[k].slice(-MAX_PUNTOS);
+    });
+
+    chartGiro.data.labels            = bufferGiro.labels;
+    chartGiro.data.datasets[0].data  = bufferGiro.x;
+    chartGiro.data.datasets[1].data  = bufferGiro.y;
+    chartGiro.data.datasets[2].data  = bufferGiro.z;
+    chartGiro.update();
+  }
+
   /**
    * Actualiza la tarjeta de Latencia (Fila 4, tarjeta azul)
    * @param {number|null} valorMs - Valor en milisegundos
@@ -552,6 +617,13 @@ document.addEventListener("DOMContentLoaded", () => {
       chartXYZ = null;
     }
     inicializarChartXYZ();
+
+    // Resetear gráfico Giroscopio
+    if (chartGiro) {
+      chartGiro.destroy();
+      chartGiro = null;
+    }
+    inicializarChartGiro();
 
     // Resetear estado del dispositivo
     actualizarEstadoDispositivo("esperando");
