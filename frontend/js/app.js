@@ -68,6 +68,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (nombre === "sesiones")       cargarFormSesion();
     if (nombre === "configuraciones") cargarConfiguraciones();
     if (nombre === "historial")      cargarSelectorHistorial();
+    if (nombre === "monitoreo")      inicializarChartXYZ();
   }
 
   // ── Sidebar móvil ──────────────────────────────────────────────────────
