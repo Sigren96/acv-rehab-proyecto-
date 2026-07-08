@@ -754,12 +754,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (valorGrados == null || isNaN(valorGrados)) {
       valorEl.textContent = "—";
-    } else {
-      const clamped = Math.max(0, Math.min(180, valorGrados));
-      valorEl.textContent = Math.round(clamped) + "°";
+      return;
     }
 
-    // Actualizar barra de progreso
+    const clamped = Math.max(0, Math.min(180, valorGrados));
+    valorEl.textContent = Math.round(clamped) + "°";
+
     const card = valorEl?.closest(".stat-card");
     if (card) {
       const barFill = card.querySelector(".stat-bar-fill");
@@ -767,8 +767,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const pct = (clamped / 180) * 100;
         barFill.style.width = pct + "%";
       }
-
-      // Actualizar badge según rango
       const badge = card.querySelector(".stat-badge");
       if (badge) {
         let texto = "";
