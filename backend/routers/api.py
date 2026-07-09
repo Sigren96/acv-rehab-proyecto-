@@ -305,8 +305,8 @@ async def obtener_sesion_activa(paciente_pin: str = None):
         query = (
             db.table("sesiones")
             .select("id, paciente_id, estado, nivel_dificultad, num_rondas, tmax_seg, umbral_g, tiempo_descanso_seg, porcentaje_go")
-            .eq("estado", "en_curso")
-            .order("iniciada_at", desc=True)
+            .in_("estado", ["pendiente", "en_curso"])
+            .order("created_at", desc=True)
         )
 
         if paciente_pin:
@@ -337,10 +337,11 @@ async def obtener_sesion_activa(paciente_pin: str = None):
         sesion = res.data[0]
         return {
             "sesion_activa": True,
-            "sesion_id":      sesion["id"],
+            "sesion_id":     sesion["id"],
+            "estado":        sesion["estado"],
             "nivel_dificultad": sesion["nivel_dificultad"],
-            "tmax_seg":        float(sesion["tmax_seg"]),
-            "umbral_g":        float(sesion["umbral_g"]),
+            "tmax_seg":      float(sesion["tmax_seg"]),
+            "umbral_g":      float(sesion["umbral_g"]),
             "num_rondas":    sesion["num_rondas"],
             "porcentaje_go": sesion["porcentaje_go"],
         }
