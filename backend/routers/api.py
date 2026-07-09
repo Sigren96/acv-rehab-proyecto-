@@ -371,7 +371,10 @@ async def recibir_telemetria(body: PaqueteTelemetria):
         res = db.table("sesiones").select("id, estado").eq("id", body.sesion_id).single().execute()
         if not res.data or res.data["estado"] != "en_curso":
             print(f"[API TELEMETRÍA] RECHAZADA - sesion_id={body.sesion_id} estado={res.data['estado'] if res.data else 'no existe'}")
-            return {"ok": False, "razon": "Sesión no activa"}
+            raise HTTPException(
+                status_code=404,
+                detail=f"Sesión no activa (estado: {res.data['estado'] if res.data else 'no existe'})"
+            )
 
         # Log de entrada: primera muestra del paquete
         primera = body.muestras[0] if body.muestras else None
@@ -392,6 +395,8 @@ async def recibir_telemetria(body: PaqueteTelemetria):
         print(f"[API TELEMETRÍA] OK - sesion_id={body.sesion_id} procesado y delegado a manager")
         return {"ok": True}
 
+    except HTTPException:
+        raise
     except Exception as e:
         import traceback
         print(f"ERROR en telemetría: {e}")
