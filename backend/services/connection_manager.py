@@ -180,17 +180,19 @@ class ConnectionManager:
             await self._guardar_resultado(sesion_id, fsm, estimulo, resultado, fsm.ronda_actual)
 
             # Notificar resultado al frontend
+            resultado_payload = {
+                "ronda":       fsm.ronda_actual,
+                "resultado":   resultado["resultado"],
+                "latencia_ms": resultado.get("latencia_ms"),
+                "angulo_deg":  resultado.get("angulo_final_deg"),
+                "temblor":     resultado.get("tasa_temblor"),
+                "estimulo":    estimulo["tipo"],
+                "direccion":   estimulo.get("direccion"),
+            }
+            print(f"[DEBUG WS] resultado_ronda payload={resultado_payload}")
             await self.broadcast(sesion_id, {
                 "tipo": "resultado_ronda",
-                "payload": {
-                    "ronda":       fsm.ronda_actual,
-                    "resultado":   resultado["resultado"],
-                    "latencia_ms": resultado.get("latencia_ms"),
-                    "angulo_deg":  resultado.get("angulo_final_deg"),
-                    "temblor":     resultado.get("tasa_temblor"),
-                    "estimulo":    estimulo["tipo"],
-                    "direccion":   estimulo.get("direccion"),
-                },
+                "payload": resultado_payload,
             })
 
             slot["estimulo_actual"] = None
