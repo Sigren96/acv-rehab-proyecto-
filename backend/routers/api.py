@@ -289,6 +289,69 @@ async def historial_paciente(paciente_id: str, user: dict = Depends(require_tera
     )
     return res.data
 
+# ════════════════════════════════════════════════════════════
+# TELEMETRÍA — Conexión HTTP POST desde la Raspberry Pi Pico
+# ════════════════════════════════════════════════════════════
+
+
+@router.get("/dispositivo/sesion-activa", tags=["Dispositivo"])
+async def obtener_sesion_activa(paciente_pin: str = None):
+    """
+    Endpoint que la Raspberry Pi Pico llama al arrancar.
+    Retorna la sesión más reciente en estado 'en_curso'.
+    """
+    db = get_supabase()
+    try:
+        query = (
+            db.table("sesiones")
+            .select("id, paciente_id, estado, nivel_dificultad, num_rondas, tmax_seg, umbral_g, tiempo_descanso_seg, porcentaje_go")
+            .eq("estado", "en_curso")
+            .order("iniciada_at", desc=True)
+        )
+
+        if paciente_pin:
+            paciente_res = (
+                db.table("pacientes")
+                .select("id")
+                .eq("pin_acceso", paciente_pin)
+                .eq("activo", True)
+                .single()
+                .execute()
+            )
+            if not paciente_res.data:
+                raise HTTPException(
+                    status_code=404,
+                    detail="PIN de paciente no encontrado."
+                )
+            query = query.eq("paciente_id", paciente_res.data["id"])
+
+        res = query.limit(1).execute()
+
+        if not res.data:
+            return {
+                "sesion_activa": False,
+                "sesion_id": None,
+                "mensaje": "No hay sesión en curso. Esperando al terapeuta."
+            }
+
+        sesion = res.data[0]
+        return {
+            "sesion_activa": True,
+            "sesion_id":      sesion["id"],
+            "nivel_dificultad": sesion["nivel_dificultad"],
+            "tmax_seg":        float(sesion["tmax_seg"]),
+            "umbral_g":        float(sesion["umbral_g"]),
+            "num_rondas":    sesion["num_rondas"],
+            "porcentaje_go": sesion["porcentaje_go"],
+        }
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error consultando sesión activa: {str(exc)}"
+        )
+
 
 # ════════════════════════════════════════════════════════════
 # TELEMETRÍA — endpoint HTTP POST desde la Pico
