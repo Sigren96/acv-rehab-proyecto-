@@ -308,8 +308,8 @@ document.addEventListener("DOMContentLoaded", () => {
         agregarFilaRonda(payload);
         actualizarContadores(payload);
         // DEBUG: inspeccionar payload antes de actualizar tarjetas visuales Fila 4
-        console.log("resultado_ronda payload:", payload);
-        console.log("latencia_ms:", payload.latencia_ms, "temblor:", payload.temblor);
+        console.log("[DEBUG] payload completo:", payload);
+        console.log("[DEBUG] angulo_deg:", payload.angulo_deg, "temblor:", payload.temblor, "latencia_ms:", payload.latencia_ms);
         if (payload.angulo_deg != null) actualizarAngulo(payload.angulo_deg);
         if (payload.temblor != null) actualizarTemblor(payload.temblor);
         if (payload.latencia_ms != null) actualizarLatencia(payload.latencia_ms);
