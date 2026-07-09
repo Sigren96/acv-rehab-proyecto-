@@ -865,10 +865,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const valorEl = document.getElementById("monitor-tasa-temblor");
     if (!valorEl) return;
 
+    let clamped = null;
+
     if (valorHz == null || isNaN(valorHz)) {
       valorEl.textContent = "—";
     } else {
-      const clamped = Math.max(0, valorHz);
+      clamped = Math.max(0, valorHz);
       valorEl.textContent = clamped.toFixed(1) + " Hz";
     }
 
@@ -876,14 +878,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const card = valorEl?.closest(".stat-card");
     if (card) {
       const barFill = card.querySelector(".stat-bar-fill");
-      if (barFill) {
+      if (barFill && clamped != null) {
         const pct = Math.min(100, (clamped / 6) * 100);
         barFill.style.width = pct + "%";
       }
 
       // Actualizar badge según rango
       const badge = card.querySelector(".stat-badge");
-      if (badge) {
+      if (badge && clamped != null) {
         let texto = "";
         if (clamped < 2) {
           texto = "Leve";
