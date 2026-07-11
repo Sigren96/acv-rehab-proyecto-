@@ -310,7 +310,7 @@ input, select, textarea { font-family: inherit; }
 }
 
 .gauge-needle {
-  transform-origin: 100px 60px;
+  transform-origin: 100px 70px;
   transform: rotate(0deg);  /* 0° = apuntando a la izquierda (0 G) */
   transition: transform var(--trans-med);
 }

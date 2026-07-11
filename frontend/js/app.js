@@ -812,7 +812,6 @@ document.addEventListener("DOMContentLoaded", () => {
       // 0 G = 0° (izquierda), 0.60 G = 180° (derecha)
       const rotation = (clamped / 0.60) * 180;
       needle.style.transform = `rotate(${rotation}deg)`;
-      needle.style.transformOrigin = "center 100%";
     }
   };
 
