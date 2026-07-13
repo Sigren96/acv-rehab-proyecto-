@@ -588,12 +588,7 @@ document.addEventListener("DOMContentLoaded", () => {
     contErrores = 0;
     document.getElementById("monitor-aciertos").textContent = "0";
     document.getElementById("monitor-errores").textContent = "0";
-    document.getElementById("monitor-ronda-actual").textContent = "0/—";
-    document.getElementById("monitor-rondas-total").textContent = "—";
-    document.getElementById("monitor-dificultad").textContent = "—";
-    document.getElementById("monitor-latencia").textContent = "— ms";
-
-    // Resetear estímulo activo
+  document.getElementById("monitor-ronda-actual").textContent = "0";
     document.getElementById("monitor-estimulo-actual").innerHTML =
       `<span class="badge badge-pending">ESPERANDO INICIO...</span>`;
 
