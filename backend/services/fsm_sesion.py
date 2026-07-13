@@ -177,15 +177,23 @@ class ProcesadorIMU:
                 "timestamp_ms": elapsed_ms,
             }
 
-            # REGLA 2: Umbral Ultra Suave 0.2G para estímulos GO
-            # Usar aceleración dinámica (magnitud - 1G gravedad) para evitar falsos positivos en reposo
+            # REGLA 2: Detección GO combinada por aceleración y giroscopio
             if self.tipo_estimulo == "GO" and not self.movimiento_detectado:
                 mag_total = self._magnitud(ax, ay, az)
                 aceleracion_dinamica = abs(mag_total - 1.0)
-                
-                print(f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, threshold=0.15G, movimiento_detectado={self.movimiento_detectado}")
-                if aceleracion_dinamica >= 0.15:
-                    print(f"[DIAG FSM] ACIERTO GO: accel_dinamica={aceleracion_dinamica:.4f}G, latencia={elapsed_ms}ms")
+                gyro_mag = math.sqrt(gx*gx + gy*gy + gz*gz)
+                gyro_umbral = cfg.umbral_giro_z
+                detectado_por_accel = aceleracion_dinamica >= self.umbral_g
+                detectado_por_gyro = gyro_mag >= gyro_umbral
+
+                print(
+                    f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, "
+                    f"gyro_mag={gyro_mag:.2f}°/s, accel_thr={self.umbral_g:.2f}, "
+                    f"gyro_thr={gyro_umbral:.1f}, movimiento_detectado={self.movimiento_detectado}"
+                )
+
+                if detectado_por_accel or detectado_por_gyro:
+                    print(f"[DIAG FSM] ACIERTO GO: accel_dinamica={aceleracion_dinamica:.4f}G, gyro_mag={gyro_mag:.2f}°/s, latencia={elapsed_ms}ms")
                     self.movimiento_detectado = True
                     self.latencia_ms = elapsed_ms
                     # Registrar acierto inmediato en historial
@@ -197,7 +205,10 @@ class ProcesadorIMU:
                     })
                     return self._cerrar_ronda("acierto", ws_data)
                 else:
-                    print(f"[DIAG FSM] GO insuficiente: accel_dinamica={aceleracion_dinamica:.4f}G")
+                    print(
+                        f"[DIAG FSM] GO insuficiente: accel_dinamica={aceleracion_dinamica:.4f}G, "
+                        f"gyro_mag={gyro_mag:.2f}°/s"
+                    )
 
             # Para NO-GO: detectar movimiento indebido → error
             if self.tipo_estimulo == "NO-GO":
