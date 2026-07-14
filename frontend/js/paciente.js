@@ -17,7 +17,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   const estimuloContent  = document.getElementById("estimulo-content");
   const contadorRonda    = document.getElementById("contador-ronda");
-  const resultadoOverlay = document.getElementById("resultado-overlay");
+  const resultadoStrip   = document.getElementById("resultado-strip");
 
   // ── Cargar nombre del paciente ─────────────────────────────────────────
   const nombres = Auth.nombres || localStorage.getItem("acv_nombres") || "Paciente";
@@ -106,10 +106,60 @@ document.addEventListener("DOMContentLoaded", () => {
       const flecha = FLECHAS[payload.direccion] || "▶";
       pantallaEstimulo.className = "estimulo-screen go";
       estimuloContent.innerHTML  = `
+        <div id="avatar-indicador-container">
+          <svg viewBox="0 0 200 200" width="180" height="180" role="img"
+               aria-label="Personaje indicando direccion del movimiento"
+               stroke-linejoin="round">
+
+            <g id="avatar-piernas">
+              <g transform="rotate(15, 95, 145)">
+                <rect x="86" y="110" width="17" height="35" fill="#2C2C2A" stroke="#000" stroke-width="2"></rect>
+                <rect x="86" y="145" width="17" height="25" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+                <ellipse cx="94" cy="172" rx="12" ry="6" fill="#185FA5" stroke="#000" stroke-width="2"></ellipse>
+              </g>
+              <g transform="rotate(-15, 105, 145)">
+                <rect x="97" y="110" width="17" height="35" fill="#2C2C2A" stroke="#000" stroke-width="2"></rect>
+                <rect x="97" y="145" width="17" height="25" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+                <ellipse cx="105" cy="172" rx="12" ry="6" fill="#185FA5" stroke="#000" stroke-width="2"></ellipse>
+              </g>
+            </g>
+
+            <g id="avatar-brazo-izquierdo" style="transform-origin:80px 78px; transform:rotate(10deg);">
+              <rect x="72" y="78" width="16" height="8" fill="#378ADD" stroke="#000" stroke-width="2"></rect>
+              <rect x="72" y="86" width="16" height="6" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+              <rect x="74" y="92" width="12" height="28" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+              <rect x="74" y="120" width="12" height="14" rx="5" ry="5" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+            </g>
+
+            <path id="avatar-torso" d="M84,68 Q78,68 78,76 L83,120 L117,120 L122,76 Q122,68 116,68 Z" fill="#378ADD" stroke="#000" stroke-width="2"></path>
+
+            <path id="avatar-short" d="M80,120 L120,120 L120,140 Q120,146 113,146 L104,146 L100,130 L96,146 L87,146 Q80,146 80,140 Z" fill="#2C2C2A" stroke="#000" stroke-width="2"></path>
+
+            <rect id="avatar-cuello" x="92" y="60" width="16" height="10" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+
+            <g id="avatar-cabeza">
+              <ellipse cx="100" cy="40" rx="20" ry="25" fill="#F2CFA6" stroke="#000" stroke-width="2"></ellipse>
+              <path d="M78,46 Q75,10 100,7 Q125,10 122,46 Q122,26 108,20 Q100,18 92,20 Q78,26 78,46 Z" fill="#6B4423" stroke="#000" stroke-width="2"></path>
+              <circle cx="92" cy="38" r="2" fill="#000"></circle>
+              <circle cx="108" cy="38" r="2" fill="#000"></circle>
+              <path d="M99,42 Q102,46 99,48" fill="none" stroke="#000" stroke-width="1.3"></path>
+              <path d="M92,52 Q100,56 108,52" fill="none" stroke="#000" stroke-width="1.5"></path>
+            </g>
+
+            <g id="avatar-brazo-derecho" style="transform-origin:120px 78px; transform:rotate(-90deg); transition: transform 0.4s ease;">
+              <rect x="112" y="78" width="16" height="8" fill="#378ADD" stroke="#000" stroke-width="2"></rect>
+              <rect x="112" y="86" width="16" height="6" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+              <rect x="114" y="92" width="12" height="28" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+              <rect x="114" y="114" width="12" height="6" rx="3" fill="#fff" stroke="#000" stroke-width="1.5"></rect>
+              <rect x="114" y="120" width="12" height="14" rx="5" ry="5" fill="#F2CFA6" stroke="#000" stroke-width="2"></rect>
+            </g>
+          </svg>
+        </div>
         <div class="go-arrow">${flecha}</div>
         <div class="estimulo-label go-label">¡MUEVE la mano!</div>
         <div class="estimulo-label go-label" style="font-size:1rem;opacity:.7">${(payload.direccion || "").toUpperCase()}</div>
       `;
+      actualizarAvatarDireccion(payload.direccion, payload.patron_validacion);
       AudioEngine.go();
     } else {
       pantallaEstimulo.className = "estimulo-screen nogo";
@@ -164,7 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       AudioEngine.timeout();
       pantallaEstimulo.className = "estimulo-screen descanso";
-      mostrarOverlayResultado("⏱", "Tiempo agotado", "");
+      mostrarOverlayResultado("⏱", "Tiempo agotado", "resultado-timeout");
     }
 
     // Volver a pantalla de espera entre rondas tras 1.5s
@@ -180,17 +230,43 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function mostrarOverlayResultado(icono, texto, clase) {
-    if (!resultadoOverlay) return;
-    resultadoOverlay.innerHTML = `
-      <div class="resultado-overlay ${clase}">
-        <div class="resultado-icon">${icono}</div>
-        <div class="resultado-text">${texto}</div>
+    if (!resultadoStrip) return;
+    resultadoStrip.innerHTML = `
+      <div class="resultado-strip-banner ${clase}">
+        <span class="resultado-strip-icon">${icono}</span>
+        <span class="resultado-strip-text">${texto}</span>
       </div>
     `;
   }
 
   function limpiarResultadoOverlay() {
-    if (resultadoOverlay) resultadoOverlay.innerHTML = "";
+    if (resultadoStrip) resultadoStrip.innerHTML = "";
+  }
+
+  function actualizarAvatarDireccion(direccion, patronValidacion) {
+    const brazo = document.getElementById("avatar-brazo-derecho");
+    if (!brazo) return;
+
+    brazo.style.animation = "none";
+
+    if (patronValidacion === "rotacion") {
+      brazo.style.setProperty("--avatar-rotation", "-90deg");
+      brazo.style.animation = "avatar-girar 1.2s linear infinite";
+      return;
+    }
+
+    const angulos = {
+      arriba:    180,
+      abajo:     0,
+      izquierda: 90,
+      derecha:   -90,
+    };
+
+    const angulo = angulos[direccion];
+    if (angulo !== undefined) {
+      brazo.style.setProperty("--avatar-rotation", `${angulo}deg`);
+      brazo.style.animation = "avatar-vaiven 1.4s ease-in-out infinite";
+    }
   }
 
   // ── Pantalla de fin de sesión ──────────────────────────────────────────

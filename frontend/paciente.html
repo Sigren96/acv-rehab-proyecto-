@@ -171,23 +171,50 @@
       white-space: nowrap;
     }
 
-    /* Overlay de resultado ronda */
-    #resultado-overlay {
+    /* Resultado de ronda fijo separado */
+    #resultado-strip {
       position: fixed;
-      inset: 0;
-      pointer-events: none;
+      top: 58px;
+      left: 0;
+      right: 0;
       display: flex;
-      align-items: center;
       justify-content: center;
-      flex-direction: column;
-      gap: 8px;
+      align-items: center;
+      padding: 0 12px;
+      pointer-events: none;
+      z-index: 10;
     }
 
-    .res-icono { font-size: clamp(3rem, 15vw, 6rem); }
-    .res-texto { font-size: clamp(.9rem, 4vw, 1.3rem); font-weight: 800; }
-    .res-acierto { color: var(--go-color); }
-    .res-error   { color: var(--nogo-color); }
-    .res-timeout { color: var(--gris-oscuro); }
+    .resultado-strip-banner {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-width: 180px;
+      padding: 10px 18px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.92);
+      box-shadow: 0 14px 32px rgba(0,0,0,.12);
+    }
+
+    .resultado-strip-banner.resultado-acierto { color: var(--go-color); }
+    .resultado-strip-banner.resultado-error   { color: var(--nogo-color); }
+    .resultado-strip-banner.resultado-timeout { color: var(--gris-oscuro); }
+
+    .resultado-strip-icon { font-size: clamp(1.6rem, 3vw, 2.2rem); line-height: 1; }
+    .resultado-strip-text { font-size: clamp(.85rem, 2.4vw, 1rem); font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+
+    #avatar-indicador-container { display: flex; justify-content: center; padding: 1rem 0; }
+
+    @keyframes avatar-girar {
+      from { transform: rotate(var(--avatar-rotation, -90deg)); }
+      to   { transform: rotate(calc(var(--avatar-rotation, -90deg) + 360deg)); }
+    }
+
+    @keyframes avatar-vaiven {
+      0%,100% { transform: rotate(var(--avatar-rotation, 0deg)); }
+      50%     { transform: rotate(calc(var(--avatar-rotation, 0deg) + 8deg)); }
+    }
 
     /* ── Pantalla de fin de sesión ── */
     #pantalla-fin {
@@ -271,6 +298,7 @@
 
   <!-- Contador de ronda (arriba centrado) -->
   <div id="contador-ronda">Ronda 1 de 10</div>
+  <div id="resultado-strip" aria-live="polite"></div>
 
   <!-- Contenido del estímulo (flecha o cruz) -->
   <div class="estimulo-centro" id="estimulo-content">
@@ -281,9 +309,6 @@
   <div class="timer-wrap">
     <div id="timer-barra"></div>
   </div>
-
-  <!-- Overlay de feedback de resultado -->
-  <div id="resultado-overlay"></div>
 </div>
 
 <!-- ══ PANTALLA 3: FIN DE SESIÓN ═════════════════════════════════════════ -->
