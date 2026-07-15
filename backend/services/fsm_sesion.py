@@ -203,7 +203,9 @@ class ProcesadorIMU:
             # Actualizar rotación acumulada por ronda usando el máximo del paquete
             if self._tiempo_ultimo_paquete is not None:
                 dt_paquete = now - self._tiempo_ultimo_paquete
-                self.rotacion_acumulada_deg += max_gyro_mag * dt_paquete
+                RUIDO_PISO_DEG_S = 6.0
+                if max_gyro_mag > RUIDO_PISO_DEG_S:
+                    self.rotacion_acumulada_deg += max_gyro_mag * dt_paquete
             self._tiempo_ultimo_paquete = now
 
             if elapsed_ms < self.gracia_ms:
