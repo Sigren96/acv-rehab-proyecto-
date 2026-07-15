@@ -177,45 +177,58 @@ class ProcesadorIMU:
                 "timestamp_ms": elapsed_ms,
             }
 
+            max_aceleracion_dinamica = 0.0
+            max_gyro_mag = 0.0
+
+            for m in muestras:
+                mx = self._get_valor(m, 'x')
+                my = self._get_valor(m, 'y')
+                mz = self._get_valor(m, 'z')
+                mgx = self._get_valor(m, 'gx')
+                mgy = self._get_valor(m, 'gy')
+                mgz = self._get_valor(m, 'gz')
+
+                mag_total_m = self._magnitud(mx, my, mz)
+                aceleracion_dinamica_m = abs(mag_total_m - 1.0)
+                gyro_mag_m = math.sqrt(mgx*mgx + mgy*mgy + mgz*mgz)
+
+                max_aceleracion_dinamica = max(max_aceleracion_dinamica, aceleracion_dinamica_m)
+                max_gyro_mag = max(max_gyro_mag, gyro_mag_m)
+
             # REGLA 2: Detección GO combinada por aceleración y giroscopio
             if self.tipo_estimulo == "GO" and not self.movimiento_detectado:
-                mag_total = self._magnitud(ax, ay, az)
-                aceleracion_dinamica = abs(mag_total - 1.0)
-                gyro_mag = math.sqrt(gx*gx + gy*gy + gz*gz)
                 gyro_umbral = cfg.umbral_giro_z
-                detectado_por_accel = aceleracion_dinamica >= self.umbral_g
-                detectado_por_gyro = gyro_mag >= gyro_umbral
+                detectado_por_accel = max_aceleracion_dinamica >= self.umbral_g
+                detectado_por_gyro = max_gyro_mag >= gyro_umbral
 
                 print(
-                    f"[DIAG FSM] GO check: mag_total={mag_total:.4f}G, accel_dinamica={aceleracion_dinamica:.4f}G, "
-                    f"gyro_mag={gyro_mag:.2f}°/s, accel_thr={self.umbral_g:.2f}, "
+                    f"[DIAG FSM] GO check: max_accel_dinamica={max_aceleracion_dinamica:.4f}G, "
+                    f"max_gyro_mag={max_gyro_mag:.2f}°/s, accel_thr={self.umbral_g:.2f}, "
                     f"gyro_thr={gyro_umbral:.1f}, movimiento_detectado={self.movimiento_detectado}"
                 )
 
                 if detectado_por_accel or detectado_por_gyro:
-                    print(f"[DIAG FSM] ACIERTO GO: accel_dinamica={aceleracion_dinamica:.4f}G, gyro_mag={gyro_mag:.2f}°/s, latencia={elapsed_ms}ms")
+                    print(f"[DIAG FSM] ACIERTO GO: max_accel_dinamica={max_aceleracion_dinamica:.4f}G, max_gyro_mag={max_gyro_mag:.2f}°/s, latencia={elapsed_ms}ms")
                     self.movimiento_detectado = True
                     self.latencia_ms = elapsed_ms
                     # Registrar acierto inmediato en historial
                     self.aciertos.append({
                         "tipo": "acierto",
                         "latencia_ms": elapsed_ms,
-                        "magnitud_g": round(aceleracion_dinamica, 3),
+                        "magnitud_g": round(max_aceleracion_dinamica, 3),
                         "direccion": self.direccion,
                     })
                     return self._cerrar_ronda("acierto", ws_data)
                 else:
                     print(
-                        f"[DIAG FSM] GO insuficiente: accel_dinamica={aceleracion_dinamica:.4f}G, "
-                        f"gyro_mag={gyro_mag:.2f}°/s"
+                        f"[DIAG FSM] GO insuficiente: max_accel_dinamica={max_aceleracion_dinamica:.4f}G, "
+                        f"max_gyro_mag={max_gyro_mag:.2f}°/s"
                     )
 
             # Para NO-GO: detectar movimiento indebido → error
             if self.tipo_estimulo == "NO-GO":
-                mag_total = self._magnitud(ax, ay, az)
-                aceleracion_dinamica = abs(mag_total - 1.0)
-                if aceleracion_dinamica >= self.umbral_g:
-                    print(f"[DIAG FSM] ERROR NO-GO: movimiento={aceleracion_dinamica:.4f}G")
+                if max_aceleracion_dinamica >= self.umbral_g:
+                    print(f"[DIAG FSM] ERROR NO-GO: movimiento={max_aceleracion_dinamica:.4f}G")
                     return self._cerrar_ronda("error", ws_data)
 
             # Retornar datos WebSocket para gráficas en tiempo real
