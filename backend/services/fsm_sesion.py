@@ -88,6 +88,10 @@ class ProcesadorIMU:
         
         # Almacenar todas las muestras IMU de la ronda para cálculos finales
         self.muestras_ronda: List[dict] = []
+        self.rotacion_acumulada_deg: float = 0.0
+        self._tiempo_ultimo_paquete: Optional[float] = None
+        self.gracia_ms: int = 400
+        self.rotacion_umbral_deg: float = 15.0
 
     def limpiar_estado(self) -> None:
         """
@@ -99,6 +103,8 @@ class ProcesadorIMU:
         self.latencia_ms = None
         self.aciertos.clear()
         self.t0 = time.monotonic()
+        self.rotacion_acumulada_deg = 0.0
+        self._tiempo_ultimo_paquete = None
 
     @staticmethod
     def _get_valor(m, campo: str) -> float:
@@ -124,15 +130,18 @@ class ProcesadorIMU:
         Para estímulos GO: calcula magnitud de aceleración. Si > 0.2G → ACIERTO inmediato.
         """
         try:
-            elapsed_ms = int((time.monotonic() - self.t0) * 1000)
+            now = time.monotonic()
+            elapsed_ms = int((now - self.t0) * 1000)
 
             # [DIAG] Log entrada
-            print(f"[DIAG FSM] procesar_paquete: elapsed_ms={elapsed_ms}, num_muestras={len(muestras)}, tipo_estimulo={self.tipo_estimulo}, movimiento_detectado={self.movimiento_detectado}")
+            print(
+                f"[DIAG FSM] procesar_paquete: elapsed_ms={elapsed_ms}, num_muestras={len(muestras)}, "
+                f"tipo_estimulo={self.tipo_estimulo}, movimiento_detectado={self.movimiento_detectado}"
+            )
 
             # Timeout check
             if elapsed_ms > int(self.tmax_seg * 1000):
                 print(f"[DIAG FSM] TIMEOUT: elapsed_ms={elapsed_ms} > tmax={self.tmax_seg*1000}")
-                # En NO-GO, agotar el tiempo sin moverse es un éxito clínico
                 resultado_timeout = "acierto" if self.tipo_estimulo == "NO-GO" else "timeout"
                 return self._cerrar_ronda(resultado_timeout)
 
@@ -145,7 +154,7 @@ class ProcesadorIMU:
                     "gx": self._get_valor(m, 'gx'),
                     "gy": self._get_valor(m, 'gy'),
                     "gz": self._get_valor(m, 'gz'),
-                    "timestamp_ms": elapsed_ms,  # tiempo relativo al inicio de la ronda
+                    "timestamp_ms": elapsed_ms,
                 })
 
             # Tomar la última muestra del paquete para WebSocket en tiempo real
@@ -154,19 +163,15 @@ class ProcesadorIMU:
                 print(f"[DIAG FSM] ultima_muestra es None, retornando None")
                 return None
 
-            # Extraer valores directos del acelerómetro (sin procesar)
             ax = self._get_valor(ultima_muestra, 'x')
             ay = self._get_valor(ultima_muestra, 'y')
             az = self._get_valor(ultima_muestra, 'z')
-            # Extraer valores del giroscopio
             gx = self._get_valor(ultima_muestra, 'gx')
             gy = self._get_valor(ultima_muestra, 'gy')
             gz = self._get_valor(ultima_muestra, 'gz')
 
-            # [DIAG] Log valores crudos
             print(f"[DIAG FSM] ultima_muestra raw: ax={ax}, ay={ay}, az={az}, gx={gx}, gy={gy}, gz={gz}")
 
-            # REGLA 1: Formato WebSocket Puro - llaves x, y, z intactas + giroscopio
             ws_data = {
                 "x": ax,
                 "y": ay,
@@ -195,41 +200,73 @@ class ProcesadorIMU:
                 max_aceleracion_dinamica = max(max_aceleracion_dinamica, aceleracion_dinamica_m)
                 max_gyro_mag = max(max_gyro_mag, gyro_mag_m)
 
-            # REGLA 2: Detección GO combinada por aceleración y giroscopio
+            # Actualizar rotación acumulada por ronda usando el máximo del paquete
+            if self._tiempo_ultimo_paquete is not None:
+                dt_paquete = now - self._tiempo_ultimo_paquete
+                self.rotacion_acumulada_deg += max_gyro_mag * dt_paquete
+            self._tiempo_ultimo_paquete = now
+
+            if elapsed_ms < self.gracia_ms:
+                print(
+                    f"[DIAG FSM] periodo de gracia {self.gracia_ms}ms, omitiendo deteccion: "
+                    f"elapsed_ms={elapsed_ms}, rotacion_acumulada_deg={self.rotacion_acumulada_deg:.2f}"
+                )
+                return ws_data
+
             if self.tipo_estimulo == "GO" and not self.movimiento_detectado:
                 gyro_umbral = cfg.umbral_giro_z
                 detectado_por_accel = max_aceleracion_dinamica >= self.umbral_g
                 detectado_por_gyro = max_gyro_mag >= gyro_umbral
+                detectado_por_rotacion = self.rotacion_acumulada_deg >= self.rotacion_umbral_deg
 
                 print(
                     f"[DIAG FSM] GO check: max_accel_dinamica={max_aceleracion_dinamica:.4f}G, "
                     f"max_gyro_mag={max_gyro_mag:.2f}°/s, accel_thr={self.umbral_g:.2f}, "
-                    f"gyro_thr={gyro_umbral:.1f}, movimiento_detectado={self.movimiento_detectado}"
+                    f"gyro_thr={gyro_umbral:.1f}, movimiento_detectado={self.movimiento_detectado}, "
+                    f"rotacion_acumulada_deg={self.rotacion_acumulada_deg:.2f}"
                 )
 
-                if detectado_por_accel or detectado_por_gyro:
-                    print(f"[DIAG FSM] ACIERTO GO: max_accel_dinamica={max_aceleracion_dinamica:.4f}G, max_gyro_mag={max_gyro_mag:.2f}°/s, latencia={elapsed_ms}ms")
+                if detectado_por_accel or detectado_por_gyro or detectado_por_rotacion:
+                    print(
+                        f"[DIAG FSM] ACIERTO GO: max_accel_dinamica={max_aceleracion_dinamica:.4f}G, "
+                        f"max_gyro_mag={max_gyro_mag:.2f}°/s, "
+                        f"rotacion_acumulada_deg={self.rotacion_acumulada_deg:.2f}, "
+                        f"latencia={elapsed_ms}ms"
+                    )
                     self.movimiento_detectado = True
                     self.latencia_ms = elapsed_ms
-                    # Registrar acierto inmediato en historial
                     self.aciertos.append({
                         "tipo": "acierto",
                         "latencia_ms": elapsed_ms,
                         "magnitud_g": round(max_aceleracion_dinamica, 3),
+                        "rotacion_acumulada_deg": round(self.rotacion_acumulada_deg, 2),
                         "direccion": self.direccion,
                     })
                     return self._cerrar_ronda("acierto", ws_data)
                 else:
                     print(
                         f"[DIAG FSM] GO insuficiente: max_accel_dinamica={max_aceleracion_dinamica:.4f}G, "
-                        f"max_gyro_mag={max_gyro_mag:.2f}°/s"
+                        f"max_gyro_mag={max_gyro_mag:.2f}°/s, "
+                        f"rotacion_acumulada_deg={self.rotacion_acumulada_deg:.2f}"
                     )
 
-            # Para NO-GO: detectar movimiento indebido → error
             if self.tipo_estimulo == "NO-GO":
-                if max_aceleracion_dinamica >= self.umbral_g:
-                    print(f"[DIAG FSM] ERROR NO-GO: movimiento={max_aceleracion_dinamica:.4f}G")
+                detectado_por_rotacion_nogo = self.rotacion_acumulada_deg >= self.rotacion_umbral_deg
+                if max_aceleracion_dinamica >= self.umbral_g or detectado_por_rotacion_nogo:
+                    print(
+                        f"[DIAG FSM] ERROR NO-GO: movimiento={max_aceleracion_dinamica:.4f}G, "
+                        f"rotacion_acumulada_deg={self.rotacion_acumulada_deg:.2f}"
+                    )
                     return self._cerrar_ronda("error", ws_data)
+
+            print(f"[DIAG FSM] Retornando ws_data para gráfico: x={ax:.4f}, y={ay:.4f}, z={az:.4f}")
+            return ws_data
+
+        except Exception as e:
+            print(f"ERROR en procesar_paquete: {e}")
+            import traceback
+            print(traceback.format_exc())
+            return self._cerrar_ronda("error")
 
             # Retornar datos WebSocket para gráficas en tiempo real
             print(f"[DIAG FSM] Retornando ws_data para gráfico: x={ax:.4f}, y={ay:.4f}, z={az:.4f}")
